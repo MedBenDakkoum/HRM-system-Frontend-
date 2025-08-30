@@ -38,6 +38,11 @@ const Button = styled.button`
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  margin-bottom: 10px;
+`;
+
+const LocationButton = styled(Button)`
+  background-color: #1d9bf0;
 `;
 
 const AttendanceList = styled.ul`
@@ -96,6 +101,25 @@ const Attendance = () => {
     }
   };
 
+  // Get current geolocation
+  const getLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLongitude(position.coords.longitude.toString());
+          setLatitude(position.coords.latitude.toString());
+          setError(""); // Clear any previous error
+        },
+        (error) => {
+          setError(`Error getting location: ${error.message}`);
+          console.error("Geolocation error:", error);
+        }
+      );
+    } else {
+      setError("Geolocation is not supported by this browser.");
+    }
+  };
+
   // Placeholder for userId (replace with actual user ID from token or context)
   const userId = "689c7ab2468c7301850b6f49"; // TODO: Replace with dynamic user ID
 
@@ -132,6 +156,9 @@ const Attendance = () => {
               value={latitude}
               onChange={(e) => setLatitude(e.target.value)}
             />
+            <LocationButton type="button" onClick={getLocation}>
+              Get Current Location
+            </LocationButton>
             <Button type="submit">Record Facial Attendance</Button>
           </Form>
           <h2>Attendance Records</h2>
