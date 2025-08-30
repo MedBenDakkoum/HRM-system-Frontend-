@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
@@ -19,6 +19,7 @@ const Form = styled.form`
   border-radius: 5px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   width: 300px;
+  margin-bottom: 20px;
 `;
 
 const Input = styled.input`
@@ -39,12 +40,40 @@ const Button = styled.button`
   cursor: pointer;
 `;
 
+const AttendanceList = styled.ul`
+  list-style: none;
+  padding: 0;
+`;
+
+const AttendanceItem = styled.li`
+  background-color: white;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+`;
+
 const Attendance = () => {
   const [faceTemplate, setFaceTemplate] = useState("");
   const [entryTime, setEntryTime] = useState("");
   const [longitude, setLongitude] = useState("");
   const [latitude, setLatitude] = useState("");
   const [error, setError] = useState("");
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
+
+  // Fetch attendance records when component mounts
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        const response = await api(`/api/attendance/employee/${userId}`, "GET");
+        setAttendanceRecords(response.data.attendance);
+      } catch (error) {
+        setError(error.message);
+        console.error("Error fetching attendance:", error);
+      }
+    };
+    fetchAttendance();
+  }, []); // Empty dependency array means it runs once on mount
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -58,11 +87,17 @@ const Attendance = () => {
         },
       });
       console.log("Attendance recorded");
+      // Refresh attendance list after successful recording
+      const response = await api(`/api/attendance/employee/${userId}`, "GET");
+      setAttendanceRecords(response.data.attendance);
     } catch (error) {
       setError(error.message);
       console.error("Error:", error);
     }
   };
+
+  // Placeholder for userId (replace with actual user ID from token or context)
+  const userId = "689c7ab2468c7301850b6f49"; // TODO: Replace with dynamic user ID
 
   return (
     <>
@@ -99,6 +134,21 @@ const Attendance = () => {
             />
             <Button type="submit">Record Facial Attendance</Button>
           </Form>
+          <h2>Attendance Records</h2>
+          {attendanceRecords.length > 0 ? (
+            <AttendanceList>
+              {attendanceRecords.map((record) => (
+                <AttendanceItem key={record._id}>
+                  {new Date(record.entryTime).toLocaleString()} - Method:{" "}
+                  {record.method}
+                  {record.exitTime &&
+                    ` - Exit: ${new Date(record.exitTime).toLocaleString()}`}
+                </AttendanceItem>
+              ))}
+            </AttendanceList>
+          ) : (
+            <p>No attendance records found.</p>
+          )}
         </Content>
       </AttendanceWrapper>
     </>
