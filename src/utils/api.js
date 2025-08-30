@@ -1,4 +1,4 @@
-const baseURL = import.meta.env.VITE_API_BASE_URL;
+const baseURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:10000";
 
 const api = async (endpoint, method = "GET", body = null, headers = {}) => {
   const options = {
@@ -7,21 +7,29 @@ const api = async (endpoint, method = "GET", body = null, headers = {}) => {
       "Content-Type": "application/json",
       ...headers,
     },
-    credentials: "include", // Sends cookies with requests
+    credentials: "include", // Ensure cookies are sent
   };
 
   if (body) {
     options.body = JSON.stringify(body);
   }
 
+  if (import.meta.env.MODE === "development") {
+    console.log("Fetching:", `${baseURL}${endpoint}`, options); // Debug log
+  }
   const response = await fetch(`${baseURL}${endpoint}`, options);
   if (!response.ok) {
+    const errorText = await response.text(); // Log response body for details
+    console.error("Fetch error:", {
+      status: response.status,
+      text: errorText,
+    });
     throw new Error(`HTTP error! status: ${response.status}`);
   }
   return await response.json();
 };
 
-// All endpoints (based on your backend)
+// All endpoints (unchanged)
 export const endpoints = {
   login: { url: "/api/employees/login", method: "POST" },
   register: { url: "/api/employees/register", method: "POST" },

@@ -1,7 +1,9 @@
 import React from "react";
 import styled from "styled-components";
-import { FaBell, FaUserCircle } from "react-icons/fa";
+import { FaBell, FaUserCircle, FaSignOutAlt } from "react-icons/fa";
 import { colors } from "../styles/GlobalStyle";
+import api from "../utils/api";
+import { useNavigate } from "react-router-dom";
 
 const NavbarWrapper = styled.nav`
   display: flex;
@@ -22,13 +24,35 @@ const Icons = styled.div`
   gap: 15px;
 `;
 
+const Icon = styled.div`
+  cursor: pointer;
+`;
+
 const Navbar = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await api("/api/employees/logout", "POST");
+      navigate("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
   return (
     <NavbarWrapper>
       <Logo>FLESK HR</Logo>
       <Icons>
-        <FaBell />
-        <FaUserCircle />
+        <Icon>
+          <FaBell />
+        </Icon>
+        <Icon>
+          <FaUserCircle />
+        </Icon>
+        <Icon onClick={handleLogout}>
+          <FaSignOutAlt />
+        </Icon>
       </Icons>
     </NavbarWrapper>
   );

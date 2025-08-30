@@ -31,7 +31,7 @@ const Input = styled.input`
 
 const Button = styled.button`
   width: 100%;
-  background-color: #ff4500;
+  background-color: #f18500;
   color: white;
   padding: 10px;
   border: none;
@@ -44,9 +44,11 @@ const Attendance = () => {
   const [entryTime, setEntryTime] = useState("");
   const [longitude, setLongitude] = useState("");
   const [latitude, setLatitude] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(""); // Clear previous error
     try {
       await api("/api/attendance/facial", "POST", {
         faceTemplate,
@@ -57,6 +59,7 @@ const Attendance = () => {
       });
       console.log("Attendance recorded");
     } catch (error) {
+      setError(error.message);
       console.error("Error:", error);
     }
   };
@@ -68,6 +71,7 @@ const Attendance = () => {
         <Sidebar />
         <Content>
           <h1>Attendance</h1>
+          {error && <p style={{ color: "red" }}>{error}</p>}
           <Form onSubmit={handleSubmit}>
             <Input
               type="text"
