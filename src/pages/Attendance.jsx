@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import styled from "styled-components";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import api from "../utils/api";
+import UserContext from "../context/UserContext";
 
 const AttendanceWrapper = styled.div`
   display: flex;
@@ -65,24 +66,36 @@ const Attendance = () => {
   const [latitude, setLatitude] = useState("");
   const [error, setError] = useState("");
   const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const { user } = useContext(UserContext);
 
-  // Fetch attendance records when component mounts
+  // Fetch attendance records when component mounts or user changes
   useEffect(() => {
-    const fetchAttendance = async () => {
-      try {
-        const response = await api(`/api/attendance/employee/${userId}`, "GET");
-        setAttendanceRecords(response.data.attendance);
-      } catch (error) {
-        setError(error.message);
-        console.error("Error fetching attendance:", error);
-      }
-    };
-    fetchAttendance();
-  }, []); // Empty dependency array means it runs once on mount
+    if (user?.id) {
+      const fetchAttendance = async () => {
+        try {
+          const response = await api(
+            `/api/attendance/employee/${user.id}`,
+            "GET"
+          );
+          setAttendanceRecords(response.data.attendance);
+        } catch (error) {
+          setError(error.message);
+          console.error("Error fetching attendance:", error);
+        }
+      };
+      fetchAttendance();
+    } else {
+      setAttendanceRecords([]); // Clear records if user is not authenticated
+    }
+  }, [user]); // Re-run when user changes
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(""); // Clear previous error
+    if (!user?.id) {
+      setError("User not authenticated");
+      return;
+    }
     try {
       await api("/api/attendance/facial", "POST", {
         faceTemplate,
@@ -93,7 +106,7 @@ const Attendance = () => {
       });
       console.log("Attendance recorded");
       // Refresh attendance list after successful recording
-      const response = await api(`/api/attendance/employee/${userId}`, "GET");
+      const response = await api(`/api/attendance/employee/${user.id}`, "GET");
       setAttendanceRecords(response.data.attendance);
     } catch (error) {
       setError(error.message);
@@ -119,9 +132,6 @@ const Attendance = () => {
       setError("Geolocation is not supported by this browser.");
     }
   };
-
-  // Placeholder for userId (replace with actual user ID from token or context)
-  const userId = "689c7ab2468c7301850b6f49"; // TODO: Replace with dynamic user ID
 
   return (
     <>
