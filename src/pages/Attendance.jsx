@@ -67,10 +67,11 @@ const Attendance = () => {
   const [error, setError] = useState("");
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const { user } = useContext(UserContext);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch attendance records when component mounts or user changes
   useEffect(() => {
     if (user?.id) {
+      setLoading(true);
       const fetchAttendance = async () => {
         try {
           const response = await api(
@@ -81,17 +82,20 @@ const Attendance = () => {
         } catch (error) {
           setError(error.message);
           console.error("Error fetching attendance:", error);
+        } finally {
+          setLoading(false);
         }
       };
       fetchAttendance();
     } else {
-      setAttendanceRecords([]); // Clear records if user is not authenticated
+      setAttendanceRecords([]);
+      setLoading(false);
     }
-  }, [user]); // Re-run when user changes
+  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // Clear previous error
+    setError("");
     if (!user?.id) {
       setError("User not authenticated");
       return;
@@ -105,7 +109,6 @@ const Attendance = () => {
         },
       });
       console.log("Attendance recorded");
-      // Refresh attendance list after successful recording
       const response = await api(`/api/attendance/employee/${user.id}`, "GET");
       setAttendanceRecords(response.data.attendance);
     } catch (error) {
@@ -114,14 +117,13 @@ const Attendance = () => {
     }
   };
 
-  // Get current geolocation
   const getLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setLongitude(position.coords.longitude.toString());
           setLatitude(position.coords.latitude.toString());
-          setError(""); // Clear any previous error
+          setError("");
         },
         (error) => {
           setError(`Error getting location: ${error.message}`);
@@ -132,6 +134,9 @@ const Attendance = () => {
       setError("Geolocation is not supported by this browser.");
     }
   };
+
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <div>Please log in to view attendance.</div>;
 
   return (
     <>
