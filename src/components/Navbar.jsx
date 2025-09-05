@@ -37,7 +37,7 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       await api("/api/employees/logout", "POST");
-      clearUser(); // Clear user state without fetching
+      clearUser();
       navigate("/");
     } catch (error) {
       console.error("Logout failed:", error);

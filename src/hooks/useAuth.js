@@ -1,14 +1,13 @@
-import React, { createContext, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../utils/api";
 
-const UserContext = createContext();
-
-export const UserProvider = ({ children, onUnauthorized }) => {
+export const useAuth = () => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // Start with loading true for initial check
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Attempt to restore user session on mount
     const restoreUserSession = async () => {
       try {
         const response = await api("/api/employees/me", "GET");
@@ -18,19 +17,19 @@ export const UserProvider = ({ children, onUnauthorized }) => {
         });
       } catch (error) {
         if (error.message.includes("401")) {
-          // Call the callback to handle unauthorized state
-          if (onUnauthorized) onUnauthorized();
+          setUser(null);
+          navigate("/");
         } else {
           console.error("Error restoring user session:", error);
+          setUser(null);
         }
-        setUser(null);
       } finally {
         setLoading(false);
       }
     };
 
     restoreUserSession();
-  }, [onUnauthorized]);
+  }, [navigate]);
 
   const setUserFromLogin = (userData) => {
     setLoading(true);
@@ -57,11 +56,12 @@ export const UserProvider = ({ children, onUnauthorized }) => {
       });
     } catch (error) {
       if (error.message.includes("401")) {
-        if (onUnauthorized) onUnauthorized();
+        setUser(null);
+        navigate("/");
       } else {
         console.error("Error refreshing user:", error);
+        setUser(null);
       }
-      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -72,13 +72,5 @@ export const UserProvider = ({ children, onUnauthorized }) => {
     setLoading(false);
   };
 
-  return (
-    <UserContext.Provider
-      value={{ user, setUserFromLogin, refreshUser, clearUser, loading }}
-    >
-      {children}
-    </UserContext.Provider>
-  );
+  return { user, setUserFromLogin, refreshUser, clearUser, loading };
 };
-
-export default UserContext;

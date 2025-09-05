@@ -104,7 +104,6 @@ const Attendance = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Trigger fetch when user is ready and on the attendance page
     if (user?.id && !loading && location.pathname === "/attendance") {
       if (user.role === "admin") {
         const fetchReports = async () => {
