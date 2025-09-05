@@ -3,6 +3,8 @@ import styled from "styled-components";
 import api from "../utils/api";
 import { useNavigate } from "react-router-dom";
 import { colors } from "../styles/GlobalStyle";
+import { useContext } from "react";
+import UserContext from "../context/UserContext";
 
 const LoginWrapper = styled.div`
   display: flex;
@@ -41,14 +43,25 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { setUserFromLogin } = useContext(UserContext);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await api("/api/employees/login", "POST", { email, password });
-      navigate("/dashboard");
+      const response = await api("/api/employees/login", "POST", {
+        email,
+        password,
+      });
+      if (response.success) {
+        // Fetch user data after login and set it
+        const userResponse = await api("/api/employees/me", "GET");
+        setUserFromLogin(userResponse.data.user);
+        navigate("/attendance"); // Redirect to attendance after setting user
+      } else {
+        console.error("Login failed:", response.message || "Unknown error");
+      }
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error("Login error:", error);
     }
   };
 

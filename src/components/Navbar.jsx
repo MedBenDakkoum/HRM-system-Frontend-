@@ -4,6 +4,8 @@ import { FaBell, FaUserCircle, FaSignOutAlt } from "react-icons/fa";
 import { colors } from "../styles/GlobalStyle";
 import api from "../utils/api";
 import { useNavigate } from "react-router-dom";
+import { useContext } from "react";
+import UserContext from "../context/UserContext";
 
 const NavbarWrapper = styled.nav`
   display: flex;
@@ -30,10 +32,12 @@ const Icon = styled.div`
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const { clearUser } = useContext(UserContext);
 
   const handleLogout = async () => {
     try {
       await api("/api/employees/logout", "POST");
+      clearUser(); // Clear user state without fetching
       navigate("/");
     } catch (error) {
       console.error("Logout failed:", error);

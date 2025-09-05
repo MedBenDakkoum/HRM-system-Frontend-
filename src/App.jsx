@@ -5,20 +5,23 @@ import Dashboard from "./pages/Dashboard";
 import Attendance from "./pages/Attendance";
 import Documents from "./pages/Documents";
 import Leaves from "./pages/Leaves";
+import { UserProvider } from "./context/UserContext"; // Import UserProvider
 
 function App() {
   return (
     <>
       <GlobalStyle />
-      <Router>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/attendance" element={<Attendance />} />
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/leaves" element={<Leaves />} />
-        </Routes>
-      </Router>
+      <UserProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/leaves" element={<Leaves />} />
+          </Routes>
+        </Router>
+      </UserProvider>
     </>
   );
 }
