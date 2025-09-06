@@ -8,20 +8,39 @@ import {
   FaClipboardList,
 } from "react-icons/fa";
 import { colors } from "../styles/GlobalStyle";
+import { COLORS } from "../utils/constants";
 
 const SidebarWrapper = styled.div`
-  position: fixed; /* Keep it fixed on the left */
-  top: 52px;
-  left: 0;
-  width: 250px;
-  height: 100vh; /* Full viewport height */
+  position: fixed;
+  top: 82px; /* start right below navbar height */
+  left: 10px;
+  width: 200px;
+  height: calc(100vh - 52px); /* full height minus navbar */
   background-color: white;
   padding: 20px;
   border-right: 1px solid ${colors.secondary};
   display: flex;
   flex-direction: column;
-  overflow-y: auto; /* Scroll internally if items overflow */
-  z-index: 1000; /* Make sure it stays above content */
+  overflow-y: auto;
+  z-index: 999; /* below navbar */
+
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+  transition: all 0.3s ease;
+
+  /* Smooth scroll */
+  scroll-behavior: smooth;
+
+  /* Thin scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+  }
 `;
 
 const SidebarLink = styled(Link)`
@@ -35,6 +54,7 @@ const SidebarLink = styled(Link)`
 
   &.active {
     background-color: ${colors.background};
+    color: ${COLORS.primary};
     font-weight: bold;
   }
 
