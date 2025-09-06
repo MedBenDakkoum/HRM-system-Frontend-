@@ -5,6 +5,9 @@ import Sidebar from "../components/Sidebar";
 
 const DashboardWrapper = styled.div`
   display: flex;
+  margin-left: 250px; /* Space for sidebar */
+  min-height: 100vh; /* Ensure full viewport height */
+  padding: 0px 60px 40px 60px;
 `;
 
 const Content = styled.div`

@@ -13,7 +13,8 @@ import Leaves from "./pages/Leaves";
 import { UserProvider } from "./context/UserContext";
 import { useContext } from "react";
 import UserContext from "./context/UserContext";
-import ErrorBoundary from "./components/ErrorBoundary"; // Import the error boundary
+import ErrorBoundary from "./components/ErrorBoundary";
+import Navbar, { NavbarSpacer } from "./components/Navbar"; // Import Navbar
 
 // ProtectedRoute component to restrict access to authenticated routes
 const ProtectedRoute = ({ children }) => {
@@ -39,14 +40,16 @@ function App() {
       <UserProvider onUnauthorized={handleUnauthorized}>
         <Router>
           <ErrorBoundary>
-            {" "}
-            {/* Wrap with ErrorBoundary */}
             <Routes>
               <Route path="/" element={<Login />} />
+
+              {/* Authenticated routes */}
               <Route
                 path="/dashboard"
                 element={
                   <ProtectedRoute>
+                    <Navbar />
+                    <NavbarSpacer />
                     <Dashboard />
                   </ProtectedRoute>
                 }
@@ -55,6 +58,8 @@ function App() {
                 path="/attendance"
                 element={
                   <ProtectedRoute>
+                    <Navbar />
+                    <NavbarSpacer />
                     <Attendance />
                   </ProtectedRoute>
                 }
@@ -63,6 +68,8 @@ function App() {
                 path="/documents"
                 element={
                   <ProtectedRoute>
+                    <Navbar />
+                    <NavbarSpacer />
                     <Documents />
                   </ProtectedRoute>
                 }
@@ -71,6 +78,8 @@ function App() {
                 path="/leaves"
                 element={
                   <ProtectedRoute>
+                    <Navbar />
+                    <NavbarSpacer />
                     <Leaves />
                   </ProtectedRoute>
                 }

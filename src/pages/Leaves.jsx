@@ -6,6 +6,10 @@ import api from "../utils/api";
 
 const LeavesWrapper = styled.div`
   display: flex;
+  flex-direction: column;
+  margin-left: 250px; /* Match sidebar width */
+  padding: 0px 60px 40px 60px;
+  min-height: calc(100vh - 60px); /* Full height minus navbar */
 `;
 
 const Content = styled.div`

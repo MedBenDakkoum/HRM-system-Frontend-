@@ -8,6 +8,8 @@ import UserContext from "../context/UserContext";
 
 const AttendanceWrapper = styled.div`
   display: flex;
+  margin-left: 250px;
+  padding: 0px 60px 40px 60px;
 `;
 
 const Content = styled.div`
