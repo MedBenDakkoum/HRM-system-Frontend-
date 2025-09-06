@@ -35,7 +35,7 @@ const Input = styled.input`
 
 const Button = styled.button`
   width: 100%;
-  background-color: #ff4500;
+  background-color: #f18500;
   color: white;
   padding: 10px;
   border: none;

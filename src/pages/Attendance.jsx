@@ -36,7 +36,7 @@ const Input = styled.input`
 
 const Button = styled.button`
   width: 100%;
-  background-color: #f18500;
+  background-color: #f18500; /* #ff4500;*/
   color: white;
   padding: 10px;
   border: none;
@@ -46,7 +46,7 @@ const Button = styled.button`
 `;
 
 const LocationButton = styled(Button)`
-  background-color: #1d9bf0;
+  background-color: #85929e; /* #f18500*/
 `;
 
 const AttendanceList = styled.ul`

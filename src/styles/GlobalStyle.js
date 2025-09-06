@@ -2,7 +2,7 @@ import { createGlobalStyle } from "styled-components";
 
 const colors = {
   background: "#F8F7F6",
-  primary: "#1D9BF0",
+  primary: "#85929E",
   secondary: "#657786",
   text: "#000000",
   accent: "#FF4500",
