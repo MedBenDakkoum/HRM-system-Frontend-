@@ -5,7 +5,7 @@ const colors = {
   primary: "#85929E",
   secondary: "#657786",
   text: "#000000",
-  accent: "#FF4500",
+  accent: "#FF4500 " /*#FF4500 , #f18500*/,
 };
 
 const GlobalStyle = createGlobalStyle`
