@@ -36,13 +36,7 @@ const FormCard = styled.form`
   display: flex;
   flex-direction: column;
   gap: 15px;
-  /* transition: all 0.3s ease; */
   margin-bottom: 30px;
-
-  /* &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
-  } */
 `;
 
 const FormHeader = styled.div`
@@ -107,35 +101,8 @@ const DatePickerStyled = styled(DatePicker)`
   }
 `;
 
-const AttendanceList = styled.ul`
-  list-style: none;
-  padding: 0;
-`;
-
-const AttendanceItem = styled.li`
-  background-color: white;
-  padding: 12px 15px;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-`;
-
 const ReportCard = styled(FormCard)`
-  width: 400px;
-`;
-
-const ReportList = styled.ul`
-  list-style: none;
-  padding: 0;
-  margin-top: 20px;
-`;
-
-const ReportItem = styled.li`
-  background-color: white;
-  padding: 12px 15px;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  width: 360px;
 `;
 
 const ReportDatePicker = styled(DatePicker)`
@@ -158,21 +125,17 @@ const Loading = styled.div`
   padding: 20px;
   color: #657786;
 `;
+
 const LocationButton = styled(ButtonStyled)`
-  width: 99%; /* smaller width than the main button */
-  background-color: ${colors.primary}; /* professional color */
-  font-size: 0.95rem; /* slightly smaller font */
+  width: 99%;
+  background-color: ${colors.primary};
+  font-size: 0.95rem;
 
   &:hover {
-    background-color: darken(
-      ${colors.primary},
-      10%
-    ); /* slightly darker on hover */
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
 `;
-
 
 const SelectWrapper = styled.div`
   position: relative;
@@ -181,12 +144,12 @@ const SelectWrapper = styled.div`
 
 const SelectStyled = styled.select`
   width: 100%;
-  padding: 12px 40px 12px 12px; /* space for the arrow */
+  padding: 12px 40px 12px 12px;
   border-radius: 8px;
   border: 1px solid ${colors.primary};
   font-size: 0.95rem;
   outline: none;
-  appearance: none; /* remove default arrow */
+  appearance: none;
   background-color: white;
   transition: all 0.3s ease;
 
@@ -206,9 +169,72 @@ const SelectArrow = styled.div`
   color: #657786;
 `;
 
+const DateInputWrapper = styled.div`
+  position: relative;
+  width: 90%;
+`;
 
+const DateIcon = styled(FaRegCalendarAlt)`
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #657786;
+  pointer-events: none;
+  font-size: 1rem;
+`;
 
+/* NEW Layout + Table styles */
+const MainSection = styled.div`
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+  width: 100%;
+`;
 
+const LeftColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
+
+const TableCard = styled.div`
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  padding: 25px 20px;
+  overflow-x: auto;
+`;
+
+const TableTitle = styled.h2`
+  margin: 0 0 15px 0;
+  font-size: 1.3rem;
+  color: #333;
+`;
+
+const StyledTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+
+  th,
+  td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  th {
+    background: #f9fafb;
+    color: #374151;
+    font-weight: 600;
+  }
+
+  tr:hover {
+    background: #fef3e7;
+  }
+`;
 
 const Attendance = () => {
   const [faceTemplate, setFaceTemplate] = useState("");
@@ -323,116 +349,160 @@ const Attendance = () => {
         <Content>
           {error && <p style={{ color: "red" }}>{error}</p>}
 
-          <FormCard onSubmit={handleSubmit}>
-            <FormHeader>
-              <Title>Record Attendance</Title>
-            </FormHeader>
+          <MainSection>
+            {/* LEFT COLUMN */}
+            <LeftColumn>
+              <FormCard onSubmit={handleSubmit}>
+                <FormHeader>
+                  <Title>Record Attendance</Title>
+                </FormHeader>
 
-            <InputStyled
-              placeholder="Face Template"
-              value={faceTemplate}
-              onChange={(e) => setFaceTemplate(e.target.value)}
-            />
+                <InputStyled
+                  placeholder="Face Template"
+                  value={faceTemplate}
+                  onChange={(e) => setFaceTemplate(e.target.value)}
+                />
 
-            <DatePickerStyled
-              selected={entryTime ? new Date(entryTime) : null}
-              onChange={(date) => setEntryTime(date ? date.toISOString() : "")}
-              showTimeSelect
-              timeFormat="HH:mm"
-              timeIntervals={5}
-              dateFormat="dd/MM/yyyy HH:mm"
-              placeholderText="Entry Time" /*"jj/mm/aaaa --:--" */
-            />
+                <DatePickerStyled
+                  selected={entryTime ? new Date(entryTime) : null}
+                  onChange={(date) =>
+                    setEntryTime(date ? date.toISOString() : "")
+                  }
+                  showTimeSelect
+                  timeFormat="HH:mm"
+                  timeIntervals={5}
+                  dateFormat="dd/MM/yyyy HH:mm"
+                  placeholderText="Entry Time"
+                />
 
-            <InputStyled
-              placeholder="Longitude"
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-            />
+                <InputStyled
+                  placeholder="Longitude"
+                  value={longitude}
+                  onChange={(e) => setLongitude(e.target.value)}
+                />
 
-            <InputStyled
-              placeholder="Latitude"
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-            />
+                <InputStyled
+                  placeholder="Latitude"
+                  value={latitude}
+                  onChange={(e) => setLatitude(e.target.value)}
+                />
 
-            <LocationButton type="button" onClick={getLocation}>
-              Get Current Location
-            </LocationButton>
+                <LocationButton type="button" onClick={getLocation}>
+                  Get Current Location
+                </LocationButton>
 
-            <ButtonStyled type="submit">Record Attendance</ButtonStyled>
-          </FormCard>
+                <ButtonStyled type="submit">Record Attendance</ButtonStyled>
+              </FormCard>
 
-          {user?.role === "admin" && (
-            <ReportCard onSubmit={handleReportSubmit}>
-              <FormHeader>
-                <Title>Generate Employee Report</Title>
-              </FormHeader>
+              {user?.role === "admin" && (
+                <ReportCard onSubmit={handleReportSubmit}>
+                  <FormHeader>
+                    <Title>Generate Employee Report</Title>
+                  </FormHeader>
 
-              <InputStyled
-                placeholder="Employee ID"
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
-              />
-              <SelectWrapper>
-                <SelectStyled
-                  value={period}
-                  onChange={(e) => setPeriod(e.target.value)}
-                >
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="trimestrally">Trimestrally</option>
-                  <option value="annually">Annually</option>
-                </SelectStyled>
-                <SelectArrow>▾</SelectArrow>
-              </SelectWrapper>
+                  <InputStyled
+                    placeholder="Employee ID"
+                    value={employeeId}
+                    onChange={(e) => setEmployeeId(e.target.value)}
+                  />
+                  <SelectWrapper>
+                    <SelectStyled
+                      value={period}
+                      onChange={(e) => setPeriod(e.target.value)}
+                    >
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="trimestrally">Trimestrally</option>
+                      <option value="annually">Annually</option>
+                    </SelectStyled>
+                    <SelectArrow>▾</SelectArrow>
+                  </SelectWrapper>
 
-              <ReportDatePicker
-                selected={startDate ? new Date(startDate) : null}
-                onChange={(date) =>
-                  setStartDate(date ? date.toISOString().split("T")[0] : "")
-                }
-                placeholderText="Select Start Date"
-                dateFormat="dd/MM/yyyy"
-                showMonthDropdown
-                showYearDropdown
-                dropdownMode="select" // makes the year dropdown a select box
-              />
+                  <ReportDatePicker
+                    selected={startDate ? new Date(startDate) : null}
+                    onChange={(date) =>
+                      setStartDate(date ? date.toISOString().split("T")[0] : "")
+                    }
+                    placeholderText="Select Start Date"
+                    dateFormat="dd/MM/yyyy"
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                  />
 
-              <ButtonStyled type="submit">Generate Report</ButtonStyled>
-            </ReportCard>
-          )}
+                  <ButtonStyled type="submit">Generate Report</ButtonStyled>
+                </ReportCard>
+              )}
+            </LeftColumn>
 
-          <h2>
-            {user?.role === "admin" ? "All Reports" : "Attendance Records"}
-          </h2>
+            {/* RIGHT COLUMN */}
+            <TableCard>
+              <TableTitle>
+                {user?.role === "admin" ? "All Reports" : "Attendance Records"}
+              </TableTitle>
 
-          {user?.role === "admin" ? (
-            reports.length ? (
-              <ReportList>
-                {reports.map((r, i) => (
-                  <ReportItem key={i}>
-                    Employee ID: {r.employeeId}, Period: {r.period}, Start:{" "}
-                    {r.startDate}, Total Hours: {r.totalHours}
-                  </ReportItem>
-                ))}
-              </ReportList>
-            ) : (
-              <p>No reports found</p>
-            )
-          ) : attendanceRecords.length ? (
-            <AttendanceList>
-              {attendanceRecords.map((a) => (
-                <AttendanceItem key={a._id}>
-                  {new Date(a.entryTime).toLocaleString()} - Method: {a.method}
-                  {a.exitTime &&
-                    ` - Exit: ${new Date(a.exitTime).toLocaleString()}`}
-                </AttendanceItem>
-              ))}
-            </AttendanceList>
-          ) : (
-            <p>No attendance records found</p>
-          )}
+              {user?.role === "admin" ? (
+                reports.length ? (
+                  <StyledTable>
+                    <thead>
+                      <tr>
+                        <th>Employee ID</th>
+                        <th>Period</th>
+                        <th>Start Date</th>
+                        <th>Total Hours</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...reports]
+                        .sort(
+                          (a, b) =>
+                            new Date(b.startDate) - new Date(a.startDate)
+                        )
+                        .map((r, i) => (
+                          <tr key={i}>
+                            <td>{r.employeeId}</td>
+                            <td>{r.period}</td>
+                            <td>{r.startDate}</td>
+                            <td>{r.totalHours}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </StyledTable>
+                ) : (
+                  <p>No reports found</p>
+                )
+              ) : attendanceRecords.length ? (
+                <StyledTable>
+                  <thead>
+                    <tr>
+                      <th>Entry Time</th>
+                      <th>Method</th>
+                      <th>Exit Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...attendanceRecords]
+                      .sort(
+                        (a, b) => new Date(b.entryTime) - new Date(a.entryTime)
+                      )
+                      .map((a) => (
+                        <tr key={a._id}>
+                          <td>{new Date(a.entryTime).toLocaleString()}</td>
+                          <td>{a.method}</td>
+                          <td>
+                            {a.exitTime
+                              ? new Date(a.exitTime).toLocaleString()
+                              : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </StyledTable>
+              ) : (
+                <p>No attendance records found</p>
+              )}
+            </TableCard>
+          </MainSection>
         </Content>
       </AttendanceWrapper>
     </>
