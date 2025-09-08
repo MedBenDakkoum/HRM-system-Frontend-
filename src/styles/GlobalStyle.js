@@ -4,6 +4,7 @@ const colors = {
   background: "#F8F7F6",
   primary: "#85929E",
   secondary: "#657786",
+  tertialy: "#f18500",
   text: "#000000",
   accent: "#FF4500 " /*#FF4500 , #f18500*/,
 };
