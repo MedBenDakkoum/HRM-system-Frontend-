@@ -6,6 +6,7 @@ import {
   FaCalendarCheck,
   FaFileAlt,
   FaClipboardList,
+  FaUser,
 } from "react-icons/fa";
 import { colors } from "../styles/GlobalStyle";
 import { COLORS } from "../utils/constants";
@@ -84,6 +85,15 @@ const Sidebar = () => {
           {link.icon} {link.label}
         </SidebarLink>
       ))}
+      {/* Profile link only for authenticated non-admin users */}
+      {location.pathname !== "/" && (
+        <SidebarLink
+          to="/profile"
+          className={location.pathname === "/profile" ? "active" : ""}
+        >
+          <FaUser /> Profile
+        </SidebarLink>
+      )}
     </SidebarWrapper>
   );
 };

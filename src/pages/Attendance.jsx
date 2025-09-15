@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import { useLocation } from "react-router-dom";
 import styled from "styled-components";
 import Navbar from "../components/Navbar";
@@ -9,6 +9,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { colors } from "../styles/GlobalStyle";
 import { FaRegCalendarAlt } from "react-icons/fa";
+import * as faceapi from "face-api.js";
 
 const AttendanceWrapper = styled.div`
   display: flex;
@@ -53,19 +54,25 @@ const Title = styled.h2`
   margin: 0;
 `;
 
-const InputStyled = styled.input`
+const VideoContainer = styled.div`
+  position: relative;
   width: 90%;
-  padding: 12px 14px;
+  margin-bottom: 10px;
+  display: ${(props) => (props.$show ? "block" : "none")};
+`;
+
+const Video = styled.video`
+  width: 100%;
   border-radius: 8px;
   border: 1px solid ${colors.primary};
-  font-size: 0.95rem;
-  outline: none;
-  transition: all 0.3s ease;
+`;
 
-  &:focus {
-    border-color: ${colors.tertialy};
-    box-shadow: 0 0 0 3px rgba(241, 133, 0, 0.2);
-  }
+const Canvas = styled.canvas`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
 `;
 
 const ButtonStyled = styled.button`
@@ -75,7 +82,7 @@ const ButtonStyled = styled.button`
   font-weight: 600;
   font-size: 1rem;
   border: none;
-  background-color: #f18500;
+  background-color: ${(props) => (props.$stop ? "#dc3545" : "#f18500")};
   color: white;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -83,6 +90,11 @@ const ButtonStyled = styled.button`
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  &:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
   }
 `;
 
@@ -184,7 +196,21 @@ const DateIcon = styled(FaRegCalendarAlt)`
   font-size: 1rem;
 `;
 
-/* NEW Layout + Table styles */
+const InputStyled = styled.input`
+  width: 90%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid ${colors.primary};
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.3s ease;
+
+  &:focus {
+    border-color: ${colors.tertialy};
+    box-shadow: 0 0 0 3px rgba(241, 133, 0, 0.2);
+  }
+`;
+
 const MainSection = styled.div`
   display: flex;
   gap: 30px;
@@ -236,19 +262,38 @@ const StyledTable = styled.table`
   }
 `;
 
+const Alert = styled.div`
+  padding: 10px 15px;
+  border-radius: 5px;
+  text-align: center;
+  font-size: 0.9rem;
+  margin-top: 10px;
+  background-color: ${(props) =>
+    props.type === "success" ? "#d4edda" : "#f8d7da"};
+  color: ${(props) => (props.type === "success" ? "#155724" : "#721c24")};
+  border: 1px solid
+    ${(props) => (props.type === "success" ? "#c3e6cb" : "#f5c6cb")};
+  display: ${(props) => (props.show ? "block" : "none")};
+`;
+
 const Attendance = () => {
-  const [faceTemplate, setFaceTemplate] = useState("");
   const [entryTime, setEntryTime] = useState("");
   const [longitude, setLongitude] = useState("");
   const [latitude, setLatitude] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState({ text: "", type: "" });
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [reports, setReports] = useState([]);
   const [employeeId, setEmployeeId] = useState("");
   const [period, setPeriod] = useState("weekly");
   const [startDate, setStartDate] = useState("");
+  const [method, setMethod] = useState("manual");
   const { user, loading } = useContext(UserContext);
   const location = useLocation();
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [stream, setStream] = useState(null);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
 
   useEffect(() => {
     if (user?.id && !loading && location.pathname === "/attendance") {
@@ -261,7 +306,11 @@ const Attendance = () => {
             );
             setReports(response.data.reports || []);
           } catch (error) {
-            setError(error.message);
+            console.error("Fetch reports failed:", error);
+            setMessage({
+              text: "Failed to fetch reports. Try again.",
+              type: "error",
+            });
           }
         };
         fetchReports();
@@ -274,7 +323,11 @@ const Attendance = () => {
             );
             setAttendanceRecords(response.data.attendance || []);
           } catch (error) {
-            setError(error.message);
+            console.error("Failed to fetch attendance records", error);
+            setMessage({
+              text: "Failed to fetch attendance records. Try again.",
+              type: "error",
+            });
           }
         };
         fetchAttendance();
@@ -282,25 +335,258 @@ const Attendance = () => {
     }
   }, [user, loading, location]);
 
+  useEffect(() => {
+    const loadModels = async () => {
+      console.log("Loading face-api.js models from CDN...");
+      try {
+        await faceapi.nets.tinyFaceDetector.loadFromUri(
+          "https://justadudewhohacks.github.io/face-api.js/models"
+        );
+        await faceapi.nets.faceLandmark68Net.loadFromUri(
+          "https://justadudewhohacks.github.io/face-api.js/models"
+        );
+        await faceapi.nets.faceRecognitionNet.loadFromUri(
+          "https://justadudewhohacks.github.io/face-api.js/models"
+        );
+        console.log("Models loaded successfully from CDN");
+        setModelsLoaded(true);
+      } catch (error) {
+        console.error("Error loading models from CDN:", error.message);
+        setMessage({
+          text: "Failed to load face detection models. Refresh page.",
+          type: "error",
+        });
+      }
+    };
+    loadModels();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+        setStream(null);
+        setShowCamera(false);
+      }
+    };
+  }, [stream]);
+
+  const startCamera = async () => {
+    console.log("Starting camera...");
+    if (method === "facial" && !stream) {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ video: true });
+        setStream(s);
+        if (videoRef.current) videoRef.current.srcObject = s;
+        setShowCamera(true);
+        console.log("Camera started successfully");
+      } catch (error) {
+        console.error("Camera error:", error.message);
+        setMessage({
+          text: "Error accessing camera. Check permissions.",
+          type: "error",
+        });
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+          setStream(null);
+          setShowCamera(false);
+        }
+      }
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+      if (videoRef.current) videoRef.current.srcObject = null;
+      setShowCamera(false);
+      console.log("Camera stopped");
+    }
+  };
+
+  const drawFaceBox = async () => {
+    if (!videoRef.current || !canvasRef.current || !showCamera) return;
+    const canvas = canvasRef.current;
+    const displaySize = {
+      width: videoRef.current.videoWidth,
+      height: videoRef.current.videoHeight,
+    };
+    faceapi.matchDimensions(canvas, displaySize);
+    const context = canvas.getContext("2d");
+    context.clearRect(0, 0, canvas.width, canvas.height);
+
+    const detections = await faceapi
+      .detectAllFaces(
+        videoRef.current,
+        new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.8 })
+      )
+      .withFaceLandmarks();
+    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+
+    resizedDetections.forEach((detection) => {
+      const box = detection.detection.box;
+      context.beginPath();
+      context.lineWidth = 2;
+      context.strokeStyle = detection.detection.score > 0.8 ? "green" : "red";
+      context.rect(box.x, box.y, box.width, box.height);
+      context.stroke();
+      context.fillStyle = detection.detection.score > 0.8 ? "green" : "red";
+      context.font = "16px Arial";
+      context.fillText(
+        `Score: ${detection.detection.score.toFixed(2)}`,
+        box.x,
+        box.y - 10
+      );
+    });
+
+    if (showCamera) {
+      requestAnimationFrame(drawFaceBox);
+    }
+  };
+
+  useEffect(() => {
+    if (showCamera && modelsLoaded) {
+      drawFaceBox();
+    }
+  }, [showCamera, modelsLoaded]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    console.log("Handle submit triggered, method:", method);
+    setMessage({ text: "", type: "" });
     if (!user?.id) {
-      setError("User not authenticated");
+      setMessage({
+        text: "User not authenticated. Please log in.",
+        type: "error",
+      });
+      stopCamera();
       return;
     }
-    try {
-      await api("/api/attendance/facial", "POST", {
-        faceTemplate,
-        entryTime,
-        location: {
-          coordinates: [parseFloat(longitude), parseFloat(latitude)],
-        },
+
+    if (method === "facial") {
+      if (!modelsLoaded) {
+        setMessage({
+          text: "Face detection models are still loading. Please wait.",
+          type: "error",
+        });
+        stopCamera();
+        return;
+      }
+      if (!showCamera) await startCamera();
+      await new Promise((resolve) => {
+        const checkVideo = setInterval(() => {
+          if (videoRef.current && videoRef.current.readyState >= 2) {
+            clearInterval(checkVideo);
+            resolve();
+          }
+        }, 100);
       });
-      const response = await api(`/api/attendance/employee/${user.id}`, "GET");
-      setAttendanceRecords(response.data.attendance);
-    } catch (error) {
-      setError(error.message);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      try {
+        console.log("Attempting face detection...");
+        let bestDetection = null;
+        let maxScore = 0;
+        const maxAttempts = 5;
+        for (let i = 0; i < maxAttempts; i++) {
+          const detections = await faceapi
+            .detectAllFaces(
+              videoRef.current,
+              new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.8 })
+            )
+            .withFaceLandmarks()
+            .withFaceDescriptors();
+          console.log(
+            `Detection attempt ${i + 1}, detections:`,
+            detections.length
+          );
+          if (
+            detections.length > 0 &&
+            detections[0].detection.score > maxScore
+          ) {
+            bestDetection = detections[0];
+            maxScore = detections[0].detection.score;
+          }
+          if (maxScore > 0.9) break;
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+
+        if (!bestDetection || maxScore < 0.8) {
+          setMessage({
+            text: "No reliable face detected. Ensure good lighting, face the camera directly, or re-register in Profile.",
+            type: "error",
+          });
+          stopCamera();
+          return;
+        }
+
+        const faceTemplate = Array.from(bestDetection.descriptor);
+        console.log("Best face template selected:", faceTemplate);
+
+        await api("/api/attendance/facial", "POST", {
+          employeeId: user.id,
+          faceTemplate,
+          entryTime,
+          location: {
+            coordinates: [parseFloat(longitude), parseFloat(latitude)],
+          },
+        });
+        console.log("API request successful");
+
+        const response = await api(
+          `/api/attendance/employee/${user.id}`,
+          "GET"
+        );
+        setAttendanceRecords(response.data.attendance);
+        setMessage({
+          text: "Facial attendance recorded successfully.",
+          type: "success",
+        });
+        stopCamera();
+      } catch (error) {
+        console.error("Error in face detection or API:", error.message);
+        setMessage({
+          text:
+            error.response?.data?.message ||
+            "Failed to record attendance. Ensure good lighting, face the camera directly, or re-register in Profile.",
+          type: "error",
+        });
+        stopCamera();
+      }
+    } else if (method === "manual" || method === "qr") {
+      try {
+        console.log("Submitting manual/QR attendance...");
+        await api("/api/attendance", "POST", {
+          employeeId: user.id,
+          entryTime,
+          location: {
+            coordinates: [parseFloat(longitude), parseFloat(latitude)],
+          },
+          method,
+        });
+        const response = await api(
+          `/api/attendance/employee/${user.id}`,
+          "GET"
+        );
+        setAttendanceRecords(response.data.attendance);
+        setMessage({
+          text: `${
+            method.charAt(0).toUpperCase() + method.slice(1)
+          } attendance recorded successfully.`,
+          type: "success",
+        });
+        stopCamera();
+      } catch (error) {
+        console.error("Error in manual/QR submission:", error.message);
+        setMessage({
+          text:
+            error.response?.data?.message ||
+            "Failed to record attendance. Please try again.",
+          type: "error",
+        });
+        stopCamera();
+      }
     }
   };
 
@@ -310,19 +596,30 @@ const Attendance = () => {
         (position) => {
           setLongitude(position.coords.longitude.toString());
           setLatitude(position.coords.latitude.toString());
-          setError("");
+          setMessage({
+            text: "Location retrieved successfully.",
+            type: "success",
+          });
         },
-        (error) => setError(`Error getting location: ${error.message}`)
+        (error) =>
+          setMessage({
+            text: `Error getting location: ${error.message}`,
+            type: "error",
+          })
       );
     } else {
-      setError("Geolocation is not supported by this browser.");
+      setMessage({
+        text: "Geolocation is not supported by this browser.",
+        type: "error",
+      });
     }
   };
 
   const handleReportSubmit = async (e) => {
     e.preventDefault();
+    setMessage({ text: "", type: "" });
     if (user?.role !== "admin") {
-      setError("Only admins can generate reports");
+      setMessage({ text: "Only admins can generate reports.", type: "error" });
       return;
     }
     try {
@@ -334,8 +631,14 @@ const Attendance = () => {
       setEmployeeId("");
       setPeriod("weekly");
       setStartDate("");
+      setMessage({ text: "Report generated successfully.", type: "success" });
     } catch (error) {
-      setError(error.message);
+      setMessage({
+        text:
+          error.response?.data?.message ||
+          "Failed to generate report. Please try again.",
+        type: "error",
+      });
     }
   };
 
@@ -347,21 +650,27 @@ const Attendance = () => {
       <AttendanceWrapper>
         <Sidebar />
         <Content>
-          {error && <p style={{ color: "red" }}>{error}</p>}
-
           <MainSection>
-            {/* LEFT COLUMN */}
             <LeftColumn>
               <FormCard onSubmit={handleSubmit}>
                 <FormHeader>
                   <Title>Record Attendance</Title>
                 </FormHeader>
 
-                <InputStyled
-                  placeholder="Face Template"
-                  value={faceTemplate}
-                  onChange={(e) => setFaceTemplate(e.target.value)}
-                />
+                <SelectWrapper>
+                  <SelectStyled
+                    value={method}
+                    onChange={(e) => {
+                      setMethod(e.target.value);
+                      if (e.target.value !== "facial") stopCamera();
+                    }}
+                  >
+                    <option value="manual">Manual</option>
+                    <option value="facial">Facial</option>
+                    <option value="qr">QR Code</option>
+                  </SelectStyled>
+                  <SelectArrow>▾</SelectArrow>
+                </SelectWrapper>
 
                 <DatePickerStyled
                   selected={entryTime ? new Date(entryTime) : null}
@@ -387,11 +696,36 @@ const Attendance = () => {
                   onChange={(e) => setLatitude(e.target.value)}
                 />
 
+                <VideoContainer $show={showCamera}>
+                  <Video ref={videoRef} autoPlay muted />
+                  <Canvas ref={canvasRef} />
+                </VideoContainer>
+
+                <Alert show={!!message.text} type={message.type}>
+                  {message.text}
+                </Alert>
+
                 <LocationButton type="button" onClick={getLocation}>
                   Get Current Location
                 </LocationButton>
 
-                <ButtonStyled type="submit">Record Attendance</ButtonStyled>
+                <ButtonStyled
+                  type="submit"
+                  disabled={!entryTime || !longitude || !latitude}
+                >
+                  Record Attendance
+                </ButtonStyled>
+
+                {showCamera && (
+                  <ButtonStyled
+                    type="button"
+                    $stop
+                    onClick={stopCamera}
+                    disabled={!showCamera}
+                  >
+                    Stop Camera
+                  </ButtonStyled>
+                )}
               </FormCard>
 
               {user?.role === "admin" && (
@@ -399,7 +733,9 @@ const Attendance = () => {
                   <FormHeader>
                     <Title>Generate Employee Report</Title>
                   </FormHeader>
-
+                  <Alert show={!!message.text} type={message.type}>
+                    {message.text}
+                  </Alert>
                   <InputStyled
                     placeholder="Employee ID"
                     value={employeeId}
@@ -435,7 +771,6 @@ const Attendance = () => {
               )}
             </LeftColumn>
 
-            {/* RIGHT COLUMN */}
             <TableCard>
               <TableTitle>
                 {user?.role === "admin" ? "All Reports" : "Attendance Records"}

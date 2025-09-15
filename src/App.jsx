@@ -10,11 +10,12 @@ import Dashboard from "./pages/Dashboard";
 import Attendance from "./pages/Attendance";
 import Documents from "./pages/Documents";
 import Leaves from "./pages/Leaves";
+import Profile from "./pages/Profile"; // New import
 import { UserProvider } from "./context/UserContext";
 import { useContext } from "react";
 import UserContext from "./context/UserContext";
 import ErrorBoundary from "./components/ErrorBoundary";
-import Navbar, { NavbarSpacer } from "./components/Navbar"; // Import Navbar
+import Navbar, { NavbarSpacer } from "./components/Navbar";
 
 // ProtectedRoute component to restrict access to authenticated routes
 const ProtectedRoute = ({ children }) => {
@@ -29,7 +30,6 @@ function App() {
 
   const handleUnauthorized = () => {
     if (!loading) {
-      // Only redirect if not loading to avoid race conditions
       <Navigate to="/" replace />;
     }
   };
@@ -81,6 +81,16 @@ function App() {
                     <Navbar />
                     <NavbarSpacer />
                     <Leaves />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Navbar />
+                    <NavbarSpacer />
+                    <Profile />
                   </ProtectedRoute>
                 }
               />
