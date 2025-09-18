@@ -1,22 +1,20 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useCallback } from "react";
 import styled from "styled-components";
 import api from "../utils/api";
 import { useNavigate } from "react-router-dom";
 import { colors } from "../styles/GlobalStyle";
 import UserContext from "../context/UserContext";
-import { FaSignInAlt } from "react-icons/fa"; // ✅ login icon
-import { FaEye, FaEyeSlash } from "react-icons/fa"; // 👁️ icons
+import { FaSignInAlt, FaEye, FaEyeSlash } from "react-icons/fa";
+import Loading from "../components/Loading";
+import Popup from "../components/Popup";
 
+// --- Styled Components ---
 const LoginWrapper = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background: linear-gradient(
-    135deg,
-    ${colors.background} 0%,
-    #ffffff 100%
-  ); /* subtle gradient */
+  background: linear-gradient(135deg, ${colors.background} 0%, #ffffff 100%);
 `;
 
 const Form = styled.form`
@@ -40,7 +38,6 @@ const Header = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* margin-bottom: 0px; */
 `;
 
 const IconCard = styled.div`
@@ -105,6 +102,11 @@ const Button = styled.button`
     transform: translateY(-1px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
   }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 const HelperText = styled.p`
@@ -124,17 +126,16 @@ const HelperText = styled.p`
   }
 `;
 
-// wrapper for password input + icon
 const PasswordWrapper = styled.div`
   position: relative;
-  width: 99%; /* matches your email input */
+  width: 99%;
   display: flex;
-  justify-content: center; /* keeps the input centered */
+  justify-content: center;
 `;
 
 const PasswordInput = styled.input`
-  width: 90%; /* take full width inside wrapper */
-  padding: 12px 40px 12px 14px; /* padding-right for the eye */
+  width: 90%;
+  padding: 12px 40px 12px 14px;
   border: 1px solid ${colors.secondary};
   border-radius: 8px;
   outline: none;
@@ -149,7 +150,7 @@ const PasswordInput = styled.input`
 
 const EyeIcon = styled.div`
   position: absolute;
-  right: 10px; /* stays on the right */
+  right: 10px;
   top: 50%;
   transform: translateY(-50%);
   cursor: pointer;
@@ -157,32 +158,67 @@ const EyeIcon = styled.div`
   color: ${colors.secondary};
 `;
 
-
+// --- Login Component ---
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [popupType, setPopupType] = useState("error");
+  const [popupMessage, setPopupMessage] = useState("");
   const navigate = useNavigate();
   const { setUserFromLogin } = useContext(UserContext);
   const [showPassword, setShowPassword] = useState(false);
 
+  const showPopup = useCallback((type, message) => {
+    setPopupType(type);
+    setPopupMessage(message);
+    setPopupVisible(true);
+  }, []);
+
+  const validateEmail = (email) => {
+    const re =
+      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@(([^<>()[\]\\.,;:\s@"]+\.)+[^<>()[\]\\.,;:\s@"]{2,})$/i;
+    return re.test(String(email).toLowerCase());
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // --- Validation ---
+    if (!email || !password) {
+      showPopup("error", "Please enter both email and password.");
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      showPopup("error", "Please enter a valid email address.");
+      return;
+    }
+
+    setIsLoading(true);
     try {
       const response = await api("/api/employees/login", "POST", {
         email,
         password,
       });
+
       if (response.success) {
         const userResponse = await api("/api/employees/me", "GET");
         setUserFromLogin(userResponse.data.user);
         navigate("/attendance");
       } else {
-        console.error("Login failed:", response.message || "Unknown error");
+        showPopup("error", response.message || "Incorrect email or password.");
       }
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("Server error:", error);
+      showPopup("error", "Server error. Please try again later.");
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  if (isLoading) return <Loading text="Logging in..." />;
 
   return (
     <LoginWrapper>
@@ -210,12 +246,18 @@ const Login = () => {
             {showPassword ? <FaEye /> : <FaEyeSlash />}
           </EyeIcon>
         </PasswordWrapper>
-
         <Button type="submit">Login</Button>
         <HelperText>
           Don’t have an account? <a href="/register">Sign up</a>
         </HelperText>
       </Form>
+
+      <Popup
+        show={popupVisible}
+        type={popupType}
+        message={popupMessage}
+        onClose={() => setPopupVisible(false)}
+      />
     </LoginWrapper>
   );
 };

@@ -15,6 +15,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { colors } from "../styles/GlobalStyle";
 import { FaRegCalendarAlt } from "react-icons/fa";
 import * as faceapi from "face-api.js";
+import Popup from "../components/Popup";
+import Loading from "../components/Loading";
 
 const ProfileWrapper = styled.div`
   display: flex;
@@ -34,6 +36,18 @@ const Content = styled.div`
 `;
 
 const FormCard = styled.form`
+  background-color: white;
+  padding: 40px 30px;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 30px;
+`;
+
+const ProfileCard = styled.div`
   background-color: white;
   padding: 40px 30px;
   border-radius: 12px;
@@ -98,7 +112,7 @@ const ButtonStyled = styled.button`
   }
 
   &:disabled {
-    background-color: #ff4500;
+    background-color: #ccc;
     cursor: not-allowed;
   }
 `;
@@ -118,6 +132,31 @@ const InputStyled = styled.input`
   }
 `;
 
+const SelectStyled = styled.select`
+  width: 90%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid ${colors.primary};
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.3s ease;
+
+  &:focus {
+    border-color: ${colors.tertialy};
+    box-shadow: 0 0 0 3px rgba(241, 133, 0, 0.2);
+  }
+`;
+
+const DetailText = styled.div`
+  width: 90%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid ${colors.primary};
+  font-size: 0.95rem;
+  color: #333;
+  background: #f9fafb;
+`;
+
 const DateInputWrapper = styled.div`
   position: relative;
   width: 90%;
@@ -133,32 +172,29 @@ const DateIcon = styled(FaRegCalendarAlt)`
   font-size: 1rem;
 `;
 
-const Alert = styled.div`
-  padding: 10px 15px;
-  border-radius: 5px;
-  text-align: center;
-  font-size: 0.9rem;
-  margin-top: 10px;
-  background-color: ${(props) =>
-    props.type === "success" ? "#d4edda" : "#f8d7da"};
-  color: ${(props) => (props.type === "success" ? "#155724" : "#721c24")};
-  border: 1px solid
-    ${(props) => (props.type === "success" ? "#c3e6cb" : "#f5c6cb")};
-  display: ${(props) => (props.show ? "block" : "none")};
-`;
-
 const Profile = () => {
   const { user, loading } = useContext(UserContext);
+  const [employeeData, setEmployeeData] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [position, setPosition] = useState("");
   const [hireDate, setHireDate] = useState(null);
   const [qrCode, setQrCode] = useState("");
-  const [message, setMessage] = useState({ text: "", type: "" });
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const videoRef = useRef(null);
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [popupType, setPopupType] = useState("success");
+  const [popupMessage, setPopupMessage] = useState("");
+
+  const showPopup = useCallback((type, message) => {
+    setPopupType(type);
+    setPopupMessage(message);
+    setPopupVisible(true);
+  }, []);
 
   const stopCamera = useCallback(() => {
     if (stream) {
@@ -168,13 +204,11 @@ const Profile = () => {
         videoRef.current.srcObject = null;
       }
       setShowCamera(false);
-      console.log("Camera stopped at", new Date().toLocaleTimeString());
     }
   }, [stream]);
 
   useEffect(() => {
     const loadModels = async () => {
-      console.log("Loading face-api.js models from CDN...");
       try {
         await faceapi.nets.tinyFaceDetector.loadFromUri(
           "https://justadudewhohacks.github.io/face-api.js/models"
@@ -185,26 +219,53 @@ const Profile = () => {
         await faceapi.nets.faceRecognitionNet.loadFromUri(
           "https://justadudewhohacks.github.io/face-api.js/models"
         );
-        console.log("Models loaded successfully");
         setModelsLoaded(true);
       } catch (error) {
-        console.error("Error loading models from CDN:", error);
-        setMessage({
-          text: "Failed to load models. Refresh page.",
-          type: "error",
-        });
+        console.log("Failed to load models. Refresh page.", error);
+        showPopup("error", "Failed to load models. Refresh page.");
         stopCamera();
       }
     };
     loadModels();
-  }, [stopCamera]);
+  }, [stopCamera, showPopup]);
 
   useEffect(() => {
     return () => stopCamera();
   }, [stopCamera]);
 
-  const startCamera = async () => {
-    console.log("Starting camera...");
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.id || loading) return;
+      try {
+        if (user.role === "admin") {
+          const response = await api("/api/employees", "GET");
+          setEmployees(response.data.employees || []);
+          const employeeId = selectedEmployeeId || user.id;
+          const employeeResponse = await api(
+            `/api/employees/${employeeId}`,
+            "GET"
+          );
+          const data = employeeResponse.data.employee;
+          setEmployeeData(data);
+          setName(data.name || "");
+          setEmail(data.email || "");
+          setPosition(data.position || "");
+          setHireDate(data.hireDate ? new Date(data.hireDate) : null);
+          setQrCode(data.qrCode || "");
+        } else {
+          const response = await api(`/api/employees/${user.id}`, "GET");
+          const data = response.data.employee;
+          setEmployeeData(data);
+        }
+      } catch (error) {
+        console.log("Failed to fetch employee data.", error);
+        showPopup("error", "Failed to fetch employee data.");
+      }
+    };
+    fetchData();
+  }, [user, loading, selectedEmployeeId, showPopup]);
+
+  const startCamera = useCallback(async () => {
     if (!stream) {
       try {
         const s = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -213,51 +274,64 @@ const Profile = () => {
           videoRef.current.srcObject = s;
         }
         setShowCamera(true);
-        console.log("Camera started successfully");
-      } catch (err) {
-        console.error("Camera error:", err);
-        setMessage({
-          text: "Camera access failed. Check permissions.",
-          type: "error",
-        });
+      } catch (error) {
+        console.log("Camera access failed. Check permissions.", error);
+        showPopup("error", "Camera access failed. Check permissions.");
         stopCamera();
       }
     }
-  };
+  }, [stream, showPopup, stopCamera]);
 
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault();
-    setMessage({ text: "", type: "" });
-    if (!user?.id) {
-      setMessage({ text: "User not authenticated", type: "error" });
-      return;
-    }
-    try {
-      const updateData = {
-        name,
-        email,
-        position,
-        hireDate: hireDate ? hireDate.toISOString() : undefined,
-        qrCode,
-      };
-      await api(`/api/employees/${user.id}`, "PATCH", updateData);
-      setMessage({ text: "Profile updated successfully", type: "success" });
-      console.log("Profile updated successfully");
-    } catch (error) {
-      setMessage({ text: "Profile update failed. Try again.", type: "error" });
-      console.error("Profile update failed:", error);
-    }
-  };
+  const handleUpdateProfile = useCallback(
+    async (e) => {
+      e.preventDefault();
+      if (!user?.id) {
+        showPopup("error", "User not authenticated");
+        return;
+      }
+      try {
+        const updateData = {
+          name,
+          email,
+          position,
+          hireDate: hireDate ? hireDate.toISOString() : undefined,
+          qrCode,
+        };
+        const employeeId =
+          user.role === "admin" ? selectedEmployeeId || user.id : user.id;
+        await api(`/api/employees/${employeeId}`, "PATCH", updateData);
+        showPopup("success", "Profile updated successfully");
+        const response = await api(`/api/employees/${employeeId}`, "GET");
+        const data = response.data.employee;
+        setEmployeeData(data);
+        setName(data.name || "");
+        setEmail(data.email || "");
+        setPosition(data.position || "");
+        setHireDate(data.hireDate ? new Date(data.hireDate) : null);
+        setQrCode(data.qrCode || "");
+      } catch (error) {
+        console.log("Profile update failed. Try again.", error);
+        showPopup("error", "Profile update failed. Try again.");
+      }
+    },
+    [
+      user,
+      selectedEmployeeId,
+      name,
+      email,
+      position,
+      hireDate,
+      qrCode,
+      showPopup,
+    ]
+  );
 
-  const handleRegisterFace = async () => {
-    console.log("Register Face button clicked");
+  const handleRegisterFace = useCallback(async () => {
     if (!modelsLoaded) {
-      console.log("Models not loaded yet");
-      setMessage({ text: "Models not loaded. Refresh page.", type: "error" });
+      showPopup("error", "Models not loaded. Refresh page.");
       stopCamera();
       return;
     }
-    console.log("Starting camera for face registration...");
     await startCamera();
     await new Promise((resolve) => {
       const check = setInterval(() => {
@@ -269,47 +343,41 @@ const Profile = () => {
     });
     await new Promise((resolve) => requestAnimationFrame(resolve));
     try {
-      console.log("Attempting face detection...");
       const detections = await faceapi
         .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions())
         .withFaceLandmarks()
         .withFaceDescriptors();
-      console.log("Face detection completed, detections:", detections.length);
       if (detections.length === 0) {
-        setMessage({
-          text: "No face detected. Adjust and retry.",
-          type: "error",
-        });
+        showPopup("error", "No face detected. Adjust and retry.");
         stopCamera();
-        console.log("No face detected, camera stopped");
         return;
       }
-      setMessage({ text: "Face detected. Saving data...", type: "success" });
       const faceDescriptor = Array.from(detections[0].descriptor);
-      console.log("Registering face descriptor:", faceDescriptor);
-      const response = await api(
-        `/api/employees/face-template/${user.id}`,
-        "PATCH",
-        { faceDescriptor }
-      );
-      console.log("API response:", response);
-      if (response.success) {
-        setMessage({ text: "Face data saved successfully.", type: "success" });
-        console.log("Face data saved successfully");
-      } else {
-        setMessage({ text: "Failed to save face data. Retry.", type: "error" });
-        console.error("Failed to save face data");
-      }
+      const employeeId =
+        user.role === "admin" ? selectedEmployeeId || user.id : user.id;
+      await api(`/api/employees/face-template/${employeeId}`, "PATCH", {
+        faceDescriptor,
+      });
+      showPopup("success", "Face data saved successfully.");
+      const response = await api(`/api/employees/${employeeId}`, "GET");
+      setEmployeeData(response.data.employee);
     } catch (error) {
-      console.error("Error in face detection or registration:", error);
-      setMessage({ text: "Error occurred. Please retry.", type: "error" });
+      console.log("Error occurred. Please retry.", error);
+      showPopup("error", "Error occurred. Please retry.");
     } finally {
       stopCamera();
-      console.log("Camera stopped after registration attempt");
     }
-  };
+  }, [
+    user,
+    selectedEmployeeId,
+    modelsLoaded,
+    startCamera,
+    stopCamera,
+    showPopup,
+  ]);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading || !employeeData)
+    return <Loading text="Loading profile data..." />;
 
   return (
     <>
@@ -317,78 +385,125 @@ const Profile = () => {
       <ProfileWrapper>
         <Sidebar />
         <Content>
-          <FormCard onSubmit={handleUpdateProfile}>
-            <FormHeader>
-              <Title>Update Profile</Title>
-            </FormHeader>
-            <InputStyled
-              placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <InputStyled
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <InputStyled
-              placeholder="Position"
-              value={position}
-              onChange={(e) => setPosition(e.target.value)}
-            />
-            <DateInputWrapper>
-              <DatePicker
-                selected={hireDate}
-                onChange={(date) => setHireDate(date)}
-                placeholderText="Hire Date"
-                dateFormat="dd/MM/yyyy"
-                showMonthDropdown
-                showYearDropdown
-                dropdownMode="select"
-                isClearable
-              />
-              <DateIcon />
-            </DateInputWrapper>
-            <InputStyled
-              placeholder="QR Code"
-              value={qrCode}
-              onChange={(e) => setQrCode(e.target.value)}
-            />
-            <ButtonStyled type="submit" disabled={!name || !email}>
-              Update Profile
-            </ButtonStyled>
-          </FormCard>
-          <FormCard>
-            <FormHeader>
-              <Title>Register Face</Title>
-            </FormHeader>
-            <VideoContainer $show={showCamera}>
-              <Video ref={videoRef} autoPlay muted />
-              <Canvas ref={null} />
-            </VideoContainer>
-            <Alert show={!!message.text} type={message.type}>
-              {message.text}
-            </Alert>
-            <ButtonStyled
-              type="button"
-              onClick={handleRegisterFace}
-              disabled={!modelsLoaded || user?.faceDescriptor?.length === 128}
-            >
-              Register Face
-            </ButtonStyled>
-            {showCamera && (
-              <ButtonStyled
-                type="button"
-                $stop
-                onClick={stopCamera}
-                disabled={!showCamera}
-              >
-                Stop Camera
-              </ButtonStyled>
-            )}
-          </FormCard>
+          {user.role === "admin" ? (
+            <>
+              <FormCard>
+                <FormHeader>
+                  <Title>Select Employee</Title>
+                </FormHeader>
+                <SelectStyled
+                  value={selectedEmployeeId}
+                  onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                >
+                  <option value="">Select an employee</option>
+                  {employees.map((emp) => (
+                    <option key={emp._id} value={emp._id}>
+                      {emp.name} ({emp.email})
+                    </option>
+                  ))}
+                </SelectStyled>
+              </FormCard>
+              <FormCard onSubmit={handleUpdateProfile}>
+                <FormHeader>
+                  <Title>Update Profile</Title>
+                </FormHeader>
+                <InputStyled
+                  placeholder="Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <InputStyled
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <InputStyled
+                  placeholder="Position"
+                  value={position}
+                  onChange={(e) => setPosition(e.target.value)}
+                />
+                <DateInputWrapper>
+                  <DatePicker
+                    selected={hireDate}
+                    onChange={(date) => setHireDate(date)}
+                    placeholderText="Hire Date"
+                    dateFormat="dd/MM/yyyy"
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                    isClearable
+                  />
+                  <DateIcon />
+                </DateInputWrapper>
+                <InputStyled
+                  placeholder="QR Code"
+                  value={qrCode}
+                  onChange={(e) => setQrCode(e.target.value)}
+                />
+                <ButtonStyled type="submit" disabled={!name || !email}>
+                  Update Profile
+                </ButtonStyled>
+              </FormCard>
+              <FormCard as="div">
+                <FormHeader>
+                  <Title>Register Face</Title>
+                </FormHeader>
+                <VideoContainer $show={showCamera}>
+                  <Video ref={videoRef} autoPlay muted />
+                  <Canvas ref={null} />
+                </VideoContainer>
+                <ButtonStyled
+                  type="button"
+                  onClick={handleRegisterFace}
+                  disabled={!modelsLoaded || !selectedEmployeeId}
+                >
+                  Register Face
+                </ButtonStyled>
+                {showCamera && (
+                  <ButtonStyled
+                    type="button"
+                    $stop
+                    onClick={stopCamera}
+                    disabled={!showCamera}
+                  >
+                    Stop Camera
+                  </ButtonStyled>
+                )}
+              </FormCard>
+            </>
+          ) : (
+            <ProfileCard>
+              <FormHeader>
+                <Title>Your Profile</Title>
+              </FormHeader>
+              <DetailText>Name: {employeeData.name}</DetailText>
+              <DetailText>Email: {employeeData.email}</DetailText>
+              <DetailText>
+                Position: {employeeData.position || "N/A"}
+              </DetailText>
+              <DetailText>
+                Hire Date:{" "}
+                {employeeData.hireDate
+                  ? new Date(employeeData.hireDate).toLocaleDateString()
+                  : "N/A"}
+              </DetailText>
+              <DetailText>
+                QR Code: {employeeData.qrCode || "Not set"}
+              </DetailText>
+              <DetailText>
+                Face Template:{" "}
+                {employeeData.faceDescriptor ? "Registered" : "Not registered"}
+              </DetailText>
+            </ProfileCard>
+          )}
         </Content>
       </ProfileWrapper>
+      <Popup
+        show={popupVisible}
+        type={popupType}
+        message={popupMessage}
+        onClose={() => setPopupVisible(false)}
+      />
     </>
   );
 };

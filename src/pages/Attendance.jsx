@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useContext } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useContext,
+  useCallback,
+} from "react";
 import { useLocation } from "react-router-dom";
 import styled from "styled-components";
 import Navbar from "../components/Navbar";
@@ -10,6 +16,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { colors } from "../styles/GlobalStyle";
 import { FaRegCalendarAlt } from "react-icons/fa";
 import * as faceapi from "face-api.js";
+import Popup from "../components/Popup";
+import Loading from "../components/Loading";
 
 const AttendanceWrapper = styled.div`
   display: flex;
@@ -93,7 +101,7 @@ const ButtonStyled = styled.button`
   }
 
   &:disabled {
-    background-color: #ff4500; /*#ccc */
+    background-color: #ff4500;
     cursor: not-allowed;
   }
 `;
@@ -130,12 +138,6 @@ const ReportDatePicker = styled(DatePicker)`
     border-color: ${colors.tertialy};
     box-shadow: 0 0 0 3px rgba(241, 133, 0, 0.2);
   }
-`;
-
-const Loading = styled.div`
-  text-align: center;
-  padding: 20px;
-  color: #657786;
 `;
 
 const LocationButton = styled(ButtonStyled)`
@@ -262,28 +264,17 @@ const StyledTable = styled.table`
   }
 `;
 
-const Alert = styled.div`
-  padding: 10px 15px;
-  border-radius: 5px;
-  text-align: center;
-  font-size: 0.9rem;
-  margin-top: 10px;
-  background-color: ${(props) =>
-    props.type === "success" ? "#d4edda" : "#f8d7da"};
-  color: ${(props) => (props.type === "success" ? "#155724" : "#721c24")};
-  border: 1px solid
-    ${(props) => (props.type === "success" ? "#c3e6cb" : "#f5c6cb")};
-  display: ${(props) => (props.show ? "block" : "none")};
-`;
-
 const Attendance = () => {
   const [entryTime, setEntryTime] = useState("");
   const [longitude, setLongitude] = useState("");
   const [latitude, setLatitude] = useState("");
-  const [message, setMessage] = useState({ text: "", type: "" });
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [popupType, setPopupType] = useState("success");
+  const [popupMessage, setPopupMessage] = useState("");
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [reports, setReports] = useState([]);
   const [employeeId, setEmployeeId] = useState("");
+  const [employees, setEmployees] = useState([]);
   const [period, setPeriod] = useState("weekly");
   const [startDate, setStartDate] = useState("");
   const [method, setMethod] = useState("manual");
@@ -294,6 +285,12 @@ const Attendance = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
+
+  const showPopup = useCallback((type, message) => {
+    setPopupType(type);
+    setPopupMessage(message);
+    setPopupVisible(true);
+  }, []);
 
   useEffect(() => {
     if (user?.id && !loading && location.pathname === "/attendance") {
@@ -307,13 +304,20 @@ const Attendance = () => {
             setReports(response.data.reports || []);
           } catch (error) {
             console.error("Fetch reports failed:", error);
-            setMessage({
-              text: "Failed to fetch reports. Try again.",
-              type: "error",
-            });
+            showPopup("error", "Failed to fetch reports. Try again.");
+          }
+        };
+        const fetchEmployees = async () => {
+          try {
+            const response = await api("/api/employees", "GET");
+            setEmployees(response.data.employees || []);
+          } catch (error) {
+            console.error("Failed to fetch employees:", error);
+            showPopup("error", "Failed to fetch employees. Try again.");
           }
         };
         fetchReports();
+        fetchEmployees();
       } else {
         const fetchAttendance = async () => {
           try {
@@ -324,16 +328,16 @@ const Attendance = () => {
             setAttendanceRecords(response.data.attendance || []);
           } catch (error) {
             console.error("Failed to fetch attendance records", error);
-            setMessage({
-              text: "Failed to fetch attendance records. Try again.",
-              type: "error",
-            });
+            showPopup(
+              "error",
+              "Failed to fetch attendance records. Try again."
+            );
           }
         };
         fetchAttendance();
       }
     }
-  }, [user, loading, location]);
+  }, [user, loading, location, showPopup]);
 
   useEffect(() => {
     const loadModels = async () => {
@@ -352,14 +356,14 @@ const Attendance = () => {
         setModelsLoaded(true);
       } catch (error) {
         console.error("Error loading models from CDN:", error.message);
-        setMessage({
-          text: "Failed to load face detection models. Refresh page.",
-          type: "error",
-        });
+        showPopup(
+          "error",
+          "Failed to load face detection models. Refresh page."
+        );
       }
     };
     loadModels();
-  }, []);
+  }, [showPopup]);
 
   useEffect(() => {
     return () => {
@@ -382,10 +386,7 @@ const Attendance = () => {
         console.log("Camera started successfully");
       } catch (error) {
         console.error("Camera error:", error.message);
-        setMessage({
-          text: "Error accessing camera. Check permissions.",
-          type: "error",
-        });
+        showPopup("error", "Error accessing camera. Check permissions.");
         if (stream) {
           stream.getTracks().forEach((track) => track.stop());
           setStream(null);
@@ -454,22 +455,18 @@ const Attendance = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Handle submit triggered, method:", method);
-    setMessage({ text: "", type: "" });
     if (!user?.id) {
-      setMessage({
-        text: "User not authenticated. Please log in.",
-        type: "error",
-      });
+      showPopup("error", "User not authenticated. Please log in.");
       stopCamera();
       return;
     }
 
     if (method === "facial") {
       if (!modelsLoaded) {
-        setMessage({
-          text: "Face detection models are still loading. Please wait.",
-          type: "error",
-        });
+        showPopup(
+          "error",
+          "Face detection models are still loading. Please wait."
+        );
         stopCamera();
         return;
       }
@@ -513,10 +510,10 @@ const Attendance = () => {
         }
 
         if (!bestDetection || maxScore < 0.8) {
-          setMessage({
-            text: "No reliable face detected. Ensure good lighting, face the camera directly, or re-register in Profile.",
-            type: "error",
-          });
+          showPopup(
+            "error",
+            "No reliable face detected. Ensure good lighting, face the camera directly, or re-register in Profile."
+          );
           stopCamera();
           return;
         }
@@ -539,19 +536,15 @@ const Attendance = () => {
           "GET"
         );
         setAttendanceRecords(response.data.attendance);
-        setMessage({
-          text: "Facial attendance recorded successfully.",
-          type: "success",
-        });
+        showPopup("success", "Facial attendance recorded successfully.");
         stopCamera();
       } catch (error) {
         console.error("Error in face detection or API:", error.message);
-        setMessage({
-          text:
-            error.response?.data?.message ||
-            "Failed to record attendance. Ensure good lighting, face the camera directly, or re-register in Profile.",
-          type: "error",
-        });
+        showPopup(
+          "error",
+          error.response?.data?.message ||
+            "Failed to record attendance. Ensure good lighting, face the camera directly, or re-register in Profile."
+        );
         stopCamera();
       }
     } else if (method === "manual" || method === "qr") {
@@ -570,21 +563,20 @@ const Attendance = () => {
           "GET"
         );
         setAttendanceRecords(response.data.attendance);
-        setMessage({
-          text: `${
+        showPopup(
+          "success",
+          `${
             method.charAt(0).toUpperCase() + method.slice(1)
-          } attendance recorded successfully.`,
-          type: "success",
-        });
+          } attendance recorded successfully.`
+        );
         stopCamera();
       } catch (error) {
         console.error("Error in manual/QR submission:", error.message);
-        setMessage({
-          text:
-            error.response?.data?.message ||
-            "Failed to record attendance. Please try again.",
-          type: "error",
-        });
+        showPopup(
+          "error",
+          error.response?.data?.message ||
+            "Failed to record attendance. Please try again."
+        );
         stopCamera();
       }
     }
@@ -596,30 +588,25 @@ const Attendance = () => {
         (position) => {
           setLongitude(position.coords.longitude.toString());
           setLatitude(position.coords.latitude.toString());
-          setMessage({
-            text: "Location retrieved successfully.",
-            type: "success",
-          });
+          showPopup("success", "Location retrieved successfully.");
         },
-        (error) =>
-          setMessage({
-            text: `Error getting location: ${error.message}`,
-            type: "error",
-          })
+        (error) => {
+          showPopup("error", `Error getting location: ${error.message}`);
+        }
       );
     } else {
-      setMessage({
-        text: "Geolocation is not supported by this browser.",
-        type: "error",
-      });
+      showPopup("error", "Geolocation is not supported by this browser.");
     }
   };
 
   const handleReportSubmit = async (e) => {
     e.preventDefault();
-    setMessage({ text: "", type: "" });
     if (user?.role !== "admin") {
-      setMessage({ text: "Only admins can generate reports.", type: "error" });
+      showPopup("error", "Only admins can generate reports.");
+      return;
+    }
+    if (!employeeId) {
+      showPopup("error", "Please select an employee.");
       return;
     }
     try {
@@ -631,18 +618,25 @@ const Attendance = () => {
       setEmployeeId("");
       setPeriod("weekly");
       setStartDate("");
-      setMessage({ text: "Report generated successfully.", type: "success" });
+      showPopup("success", "Report generated successfully.");
     } catch (error) {
-      setMessage({
-        text:
-          error.response?.data?.message ||
-          "Failed to generate report. Please try again.",
-        type: "error",
-      });
+      showPopup(
+        "error",
+        error.response?.data?.message ||
+          "Failed to generate report. Please try again."
+      );
     }
   };
 
-  if (loading) return <Loading>Loading user data...</Loading>;
+  const isDataLoading =
+    loading ||
+    (user?.role === "admin"
+      ? reports.length === 0 && employees.length === 0
+      : attendanceRecords.length === 0);
+
+  if (isDataLoading) {
+    return <Loading text="Loading attendance data..." />;
+  }
 
   return (
     <>
@@ -701,10 +695,6 @@ const Attendance = () => {
                   <Canvas ref={canvasRef} />
                 </VideoContainer>
 
-                <Alert show={!!message.text} type={message.type}>
-                  {message.text}
-                </Alert>
-
                 <LocationButton type="button" onClick={getLocation}>
                   Get Current Location
                 </LocationButton>
@@ -733,14 +723,20 @@ const Attendance = () => {
                   <FormHeader>
                     <Title>Generate Employee Report</Title>
                   </FormHeader>
-                  <Alert show={!!message.text} type={message.type}>
-                    {message.text}
-                  </Alert>
-                  <InputStyled
-                    placeholder="Employee ID"
-                    value={employeeId}
-                    onChange={(e) => setEmployeeId(e.target.value)}
-                  />
+                  <SelectWrapper>
+                    <SelectStyled
+                      value={employeeId}
+                      onChange={(e) => setEmployeeId(e.target.value)}
+                    >
+                      <option value="">Select Employee</option>
+                      {employees.map((employee) => (
+                        <option key={employee._id} value={employee._id}>
+                          {employee.name}
+                        </option>
+                      ))}
+                    </SelectStyled>
+                    <SelectArrow>▾</SelectArrow>
+                  </SelectWrapper>
                   <SelectWrapper>
                     <SelectStyled
                       value={period}
@@ -782,6 +778,7 @@ const Attendance = () => {
                     <thead>
                       <tr>
                         <th>Employee ID</th>
+                        <th>Employee Name</th>
                         <th>Period</th>
                         <th>Start Date</th>
                         <th>Total Hours</th>
@@ -796,6 +793,7 @@ const Attendance = () => {
                         .map((r, i) => (
                           <tr key={i}>
                             <td>{r.employeeId}</td>
+                            <td>{r.employeeName || "Unknown"}</td>
                             <td>{r.period}</td>
                             <td>{r.startDate}</td>
                             <td>{r.totalHours}</td>
@@ -840,6 +838,12 @@ const Attendance = () => {
           </MainSection>
         </Content>
       </AttendanceWrapper>
+      <Popup
+        show={popupVisible}
+        type={popupType}
+        message={popupMessage}
+        onClose={() => setPopupVisible(false)}
+      />
     </>
   );
 };
