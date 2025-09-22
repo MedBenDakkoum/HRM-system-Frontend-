@@ -318,7 +318,7 @@ const Login = () => {
         </PasswordWrapper>
         <Button type="submit">Login</Button>
         <HelperText>
-          Don't have an account? <Link to="/register">Sign up</Link>
+          Don’t have an account? <a href="/Contact">Contact HR</a>
         </HelperText>
       </Form>
 
