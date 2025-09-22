@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import GlobalStyle from "./styles/GlobalStyle";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Attendance from "./pages/Attendance";
 import Documents from "./pages/Documents";
@@ -42,6 +43,7 @@ function App() {
           <ErrorBoundary>
             <Routes>
               <Route path="/" element={<Login />} />
+              <Route path="/register" element={<Register />} />
 
               {/* Authenticated routes */}
               <Route

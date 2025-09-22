@@ -1,7 +1,7 @@
 import React, { useState, useContext, useCallback } from "react";
 import styled from "styled-components";
 import api from "../utils/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { colors } from "../styles/GlobalStyle";
 import UserContext from "../context/UserContext";
 import { FaSignInAlt, FaEye, FaEyeSlash } from "react-icons/fa";
@@ -13,8 +13,15 @@ const LoginWrapper = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
+  padding: 20px;
   background: linear-gradient(135deg, ${colors.background} 0%, #ffffff 100%);
+
+  @media (max-width: 480px) {
+    padding: 16px;
+    align-items: flex-start;
+    padding-top: 40px;
+  }
 `;
 
 const Form = styled.form`
@@ -31,6 +38,18 @@ const Form = styled.form`
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+  }
+
+  @media (max-width: 480px) {
+    width: 100%;
+    max-width: 350px;
+    padding: 32px 24px;
+    gap: 18px;
+  }
+
+  @media (max-width: 360px) {
+    padding: 28px 20px;
+    gap: 16px;
   }
 `;
 
@@ -55,11 +74,20 @@ const IconCard = styled.div`
     transform: scale(1.05);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
   }
+
+  @media (max-width: 480px) {
+    padding: 6px 8px;
+    margin-bottom: 8px;
+  }
 `;
 
 const Icon = styled(FaSignInAlt)`
   font-size: 2rem;
   color: black;
+
+  @media (max-width: 480px) {
+    font-size: 1.75rem;
+  }
 `;
 
 const Title = styled.h2`
@@ -68,20 +96,34 @@ const Title = styled.h2`
   font-size: 1.5rem;
   margin-bottom: 15px;
   margin-top: 1px;
+
+  @media (max-width: 480px) {
+    font-size: 1.375rem;
+    margin-bottom: 12px;
+  }
 `;
 
 const Input = styled.input`
-  width: 90%;
+  width: 100%;
   padding: 12px 14px;
   border: 1px solid ${colors.secondary};
   border-radius: 8px;
   outline: none;
   font-size: 0.95rem;
   transition: border-color 0.3s ease;
+  box-sizing: border-box;
+  display: block;
+  margin: 0 auto;
 
   &:focus {
     border-color: ${colors.accent};
     box-shadow: 0 0 0 3px rgba(100, 181, 246, 0.2);
+  }
+
+  @media (max-width: 480px) {
+    padding: 11px 12px;
+    font-size: 0.9rem;
+    width: 100%;
   }
 `;
 
@@ -107,6 +149,11 @@ const Button = styled.button`
     opacity: 0.6;
     cursor: not-allowed;
   }
+
+  @media (max-width: 480px) {
+    padding: 11px;
+    font-size: 0.95rem;
+  }
 `;
 
 const HelperText = styled.p`
@@ -124,27 +171,45 @@ const HelperText = styled.p`
       text-decoration: underline;
     }
   }
+
+  @media (max-width: 480px) {
+    font-size: 0.8rem;
+    margin-top: 8px;
+  }
 `;
 
 const PasswordWrapper = styled.div`
   position: relative;
-  width: 99%;
+  width: 100%;
   display: flex;
   justify-content: center;
+
+  @media (max-width: 480px) {
+    width: 100%;
+  }
 `;
 
 const PasswordInput = styled.input`
-  width: 90%;
+  width: 100%;
   padding: 12px 40px 12px 14px;
   border: 1px solid ${colors.secondary};
   border-radius: 8px;
   outline: none;
   font-size: 0.95rem;
   transition: border-color 0.3s ease;
+  box-sizing: border-box;
+  display: block;
+  margin: 0 auto;
 
   &:focus {
     border-color: ${colors.accent};
     box-shadow: 0 0 0 3px rgba(100, 181, 246, 0.2);
+  }
+
+  @media (max-width: 480px) {
+    padding: 11px 38px 11px 12px;
+    font-size: 0.9rem;
+    width: 100%;
   }
 `;
 
@@ -156,6 +221,11 @@ const EyeIcon = styled.div`
   cursor: pointer;
   font-size: 1.1rem;
   color: ${colors.secondary};
+
+  @media (max-width: 480px) {
+    right: 8px;
+    font-size: 1rem;
+  }
 `;
 
 // --- Login Component ---
@@ -248,7 +318,7 @@ const Login = () => {
         </PasswordWrapper>
         <Button type="submit">Login</Button>
         <HelperText>
-          Don’t have an account? <a href="/register">Sign up</a>
+          Don't have an account? <Link to="/register">Sign up</Link>
         </HelperText>
       </Form>
 

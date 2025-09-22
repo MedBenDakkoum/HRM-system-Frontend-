@@ -286,12 +286,17 @@ const Attendance = () => {
   const [stream, setStream] = useState(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
 
+  // NEW: Fetched flags
+  const [attendanceFetched, setAttendanceFetched] = useState(false);
+  const [reportsFetched, setReportsFetched] = useState(false);
+  const [employeesFetched, setEmployeesFetched] = useState(false);
   const showPopup = useCallback((type, message) => {
     setPopupType(type);
     setPopupMessage(message);
     setPopupVisible(true);
   }, []);
 
+  // Fetch data
   useEffect(() => {
     if (user?.id && !loading && location.pathname === "/attendance") {
       if (user.role === "admin") {
@@ -305,8 +310,12 @@ const Attendance = () => {
           } catch (error) {
             console.error("Fetch reports failed:", error);
             showPopup("error", "Failed to fetch reports. Try again.");
+            setReports([]);
+          } finally {
+            setReportsFetched(true);
           }
         };
+
         const fetchEmployees = async () => {
           try {
             const response = await api("/api/employees", "GET");
@@ -314,8 +323,12 @@ const Attendance = () => {
           } catch (error) {
             console.error("Failed to fetch employees:", error);
             showPopup("error", "Failed to fetch employees. Try again.");
+            setEmployees([]);
+          } finally {
+            setEmployeesFetched(true);
           }
         };
+
         fetchReports();
         fetchEmployees();
       } else {
@@ -327,11 +340,14 @@ const Attendance = () => {
             );
             setAttendanceRecords(response.data.attendance || []);
           } catch (error) {
-            console.error("Failed to fetch attendance records", error);
+            console.error("Failed to fetch attendance records:", error);
             showPopup(
               "error",
               "Failed to fetch attendance records. Try again."
             );
+            setAttendanceRecords([]);
+          } finally {
+            setAttendanceFetched(true);
           }
         };
         fetchAttendance();
@@ -628,11 +644,12 @@ const Attendance = () => {
     }
   };
 
+  // UPDATED: loading logic using fetched flags
   const isDataLoading =
     loading ||
     (user?.role === "admin"
-      ? reports.length === 0 && employees.length === 0
-      : attendanceRecords.length === 0);
+      ? !(reportsFetched && employeesFetched)
+      : !attendanceFetched);
 
   if (isDataLoading) {
     return <Loading text="Loading attendance data..." />;

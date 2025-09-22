@@ -190,6 +190,23 @@ const Profile = () => {
   const [popupType, setPopupType] = useState("success");
   const [popupMessage, setPopupMessage] = useState("");
 
+  // Add User functionality from second code
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newUser, setNewUser] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "employee",
+    position: "",
+    hireDate: "",
+    internshipDetails: {
+      startDate: "",
+      endDate: "",
+      supervisor: "",
+      objectives: "",
+    },
+  });
+
   const showPopup = useCallback((type, message) => {
     setPopupType(type);
     setPopupMessage(message);
@@ -213,15 +230,19 @@ const Profile = () => {
         await faceapi.nets.tinyFaceDetector.loadFromUri(
           "https://justadudewhohacks.github.io/face-api.js/models"
         );
+        console.log("Tiny face detector model loaded.");
         await faceapi.nets.faceLandmark68Net.loadFromUri(
           "https://justadudewhohacks.github.io/face-api.js/models"
         );
+        console.log("Face landmark 68 model loaded.");
         await faceapi.nets.faceRecognitionNet.loadFromUri(
           "https://justadudewhohacks.github.io/face-api.js/models"
         );
+        console.log("Face recognition model loaded.");
+        console.log("All face-api models loaded successfully.");
         setModelsLoaded(true);
       } catch (error) {
-        console.log("Failed to load models. Refresh page.", error);
+        console.error("Failed to load models:", error);
         showPopup("error", "Failed to load models. Refresh page.");
         stopCamera();
       }
@@ -342,12 +363,29 @@ const Profile = () => {
       }, 100);
     });
     await new Promise((resolve) => requestAnimationFrame(resolve));
+    // Additional delay to allow camera to stabilize
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     try {
+      console.log("Attempting face detection...");
+      console.log("Video readyState:", videoRef.current.readyState);
+      console.log(
+        "Video dimensions:",
+        videoRef.current.videoWidth,
+        videoRef.current.videoHeight
+      );
       const detections = await faceapi
-        .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+        .detectAllFaces(
+          videoRef.current,
+          new faceapi.TinyFaceDetectorOptions({
+            inputSize: 320,
+            scoreThreshold: 0.3,
+          })
+        )
         .withFaceLandmarks()
         .withFaceDescriptors();
+      console.log("Detections length:", detections.length);
       if (detections.length === 0) {
+        console.log("No face detected in this attempt.");
         showPopup("error", "No face detected. Adjust and retry.");
         stopCamera();
         return;
@@ -358,11 +396,12 @@ const Profile = () => {
       await api(`/api/employees/face-template/${employeeId}`, "PATCH", {
         faceDescriptor,
       });
+      console.log("Face data saved successfully.");
       showPopup("success", "Face data saved successfully.");
       const response = await api(`/api/employees/${employeeId}`, "GET");
       setEmployeeData(response.data.employee);
     } catch (error) {
-      console.log("Error occurred. Please retry.", error);
+      console.error("Error during face registration:", error);
       showPopup("error", "Error occurred. Please retry.");
     } finally {
       stopCamera();
@@ -376,6 +415,51 @@ const Profile = () => {
     showPopup,
   ]);
 
+  // Add User functionality from second code
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        ...newUser,
+        hireDate:
+          newUser.role === "employee" && newUser.hireDate
+            ? new Date(newUser.hireDate)
+            : undefined,
+        internshipDetails: {
+          ...newUser.internshipDetails,
+          startDate: newUser.internshipDetails.startDate
+            ? new Date(newUser.internshipDetails.startDate)
+            : undefined,
+          endDate: newUser.internshipDetails.endDate
+            ? new Date(newUser.internshipDetails.endDate)
+            : undefined,
+        },
+      };
+      await api("/api/employees/register", "POST", payload);
+      showPopup("success", "User created successfully");
+      setShowAddForm(false);
+      setNewUser({
+        name: "",
+        email: "",
+        password: "",
+        role: "employee",
+        position: "",
+        hireDate: "",
+        internshipDetails: {
+          startDate: "",
+          endDate: "",
+          supervisor: "",
+          objectives: "",
+        },
+      });
+      const res = await api("/api/employees", "GET");
+      setEmployees(res.data.employees || []);
+    } catch (error) {
+      console.log("Failed to create user", error);
+      showPopup("error", "Failed to create user");
+    }
+  };
+
   if (loading || !employeeData)
     return <Loading text="Loading profile data..." />;
 
@@ -387,6 +471,170 @@ const Profile = () => {
         <Content>
           {user.role === "admin" ? (
             <>
+              {/* Add User functionality from second code */}
+              <ButtonStyled
+                type="button"
+                onClick={() => setShowAddForm(!showAddForm)}
+              >
+                {showAddForm ? "Cancel" : "Add User"}
+              </ButtonStyled>
+              {showAddForm && (
+                <FormCard onSubmit={handleAddUser}>
+                  <FormHeader>
+                    <Title>Add New User</Title>
+                  </FormHeader>
+                  <InputStyled
+                    placeholder="Name"
+                    value={newUser.name}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, name: e.target.value })
+                    }
+                  />
+                  <InputStyled
+                    placeholder="Email"
+                    value={newUser.email}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, email: e.target.value })
+                    }
+                  />
+                  <InputStyled
+                    type="password"
+                    placeholder="Password"
+                    value={newUser.password}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, password: e.target.value })
+                    }
+                  />
+                  <SelectStyled
+                    value={newUser.role}
+                    onChange={(e) =>
+                      setNewUser({
+                        ...newUser,
+                        role: e.target.value,
+                        // Clear hireDate when switching to stagiaire
+                        hireDate:
+                          e.target.value === "employee" ? newUser.hireDate : "",
+                      })
+                    }
+                  >
+                    <option value="employee">Employee</option>
+                    <option value="stagiaire">Stagiaire</option>
+                  </SelectStyled>
+                  <InputStyled
+                    placeholder="Position"
+                    value={newUser.position}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, position: e.target.value })
+                    }
+                  />
+                  {/* Show Hire Date only for employees */}
+                  {newUser.role === "employee" && (
+                    <>
+                      <label
+                        style={{
+                          fontSize: "0.9rem",
+                          color: "#666",
+                          marginTop: "10px",
+                        }}
+                      >
+                        Hire Date:
+                      </label>
+                      <InputStyled
+                        type="date"
+                        value={newUser.hireDate}
+                        onChange={(e) =>
+                          setNewUser({ ...newUser, hireDate: e.target.value })
+                        }
+                      />
+                    </>
+                  )}
+                  {newUser.role === "stagiaire" && (
+                    <>
+                      <h4
+                        style={{
+                          fontSize: "1.1rem",
+                          color: "#333",
+                          margin: "15px 0 10px 0",
+                        }}
+                      >
+                        Internship Details
+                      </h4>
+                      <label
+                        style={{
+                          fontSize: "0.9rem",
+                          color: "#666",
+                          marginTop: "10px",
+                        }}
+                      >
+                        Start Date:
+                      </label>
+                      <InputStyled
+                        type="date"
+                        value={newUser.internshipDetails.startDate}
+                        onChange={(e) =>
+                          setNewUser({
+                            ...newUser,
+                            internshipDetails: {
+                              ...newUser.internshipDetails,
+                              startDate: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                      <label
+                        style={{
+                          fontSize: "0.9rem",
+                          color: "#666",
+                          marginTop: "10px",
+                        }}
+                      >
+                        End Date:
+                      </label>
+                      <InputStyled
+                        type="date"
+                        value={newUser.internshipDetails.endDate}
+                        onChange={(e) =>
+                          setNewUser({
+                            ...newUser,
+                            internshipDetails: {
+                              ...newUser.internshipDetails,
+                              endDate: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                      <InputStyled
+                        placeholder="Supervisor"
+                        value={newUser.internshipDetails.supervisor}
+                        onChange={(e) =>
+                          setNewUser({
+                            ...newUser,
+                            internshipDetails: {
+                              ...newUser.internshipDetails,
+                              supervisor: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                      <InputStyled
+                        placeholder="Objectives"
+                        value={newUser.internshipDetails.objectives}
+                        onChange={(e) =>
+                          setNewUser({
+                            ...newUser,
+                            internshipDetails: {
+                              ...newUser.internshipDetails,
+                              objectives: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </>
+                  )}
+                  <ButtonStyled type="submit">Create User</ButtonStyled>
+                </FormCard>
+              )}
+
               <FormCard>
                 <FormHeader>
                   <Title>Select Employee</Title>
