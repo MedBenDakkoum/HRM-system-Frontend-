@@ -22,7 +22,7 @@ import {
 } from "react-icons/fa";
 import Popup from "../components/Popup";
 import Loading from "../components/Loading";
-import { formatDate } from "../utils/helpers";
+import { formatDate } from "../utils/Helpers";
 
 const LeavesWrapper = styled.div`
   display: flex;
