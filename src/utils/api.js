@@ -1,3 +1,5 @@
+
+
 const baseURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:10000";
 
 const api = async (endpoint, method = "GET", body = null, headers = {}) => {
@@ -55,6 +57,7 @@ export const endpoints = {
     method: "GET",
   },
   getAllAttestations: { url: "/api/documents/attestations", method: "GET" },
+  getAllDocuments: { url: "/api/documents/all", method: "GET" },
   downloadDocument: { url: "/api/documents/download/:docId", method: "GET" },
   requestLeave: { url: "/api/leaves", method: "POST" },
   approveLeave: { url: "/api/leaves/approve", method: "POST" },
