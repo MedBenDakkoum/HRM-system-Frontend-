@@ -44,6 +44,41 @@ const SidebarWrapper = styled.div`
     background-color: rgba(0, 0, 0, 0.1);
     border-radius: 3px;
   }
+
+  @media (max-width: 768px) {
+    transform: ${(props) =>
+      props.$isOpen ? "translateX(0)" : "translateX(-100%)"};
+    width: 280px;
+    left: 0;
+    top: 70px;
+    height: calc(100vh - 70px);
+    border-radius: 0;
+    border-right: none;
+    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+  }
+
+  @media (max-width: 480px) {
+    width: 100%;
+    top: 66px;
+    height: calc(100vh - 66px);
+  }
+`;
+
+// Mobile overlay
+const MobileOverlay = styled.div`
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+
+  @media (max-width: 768px) {
+    display: ${(props) => (props.$isOpen ? "block" : "none")};
+  }
 `;
 
 const SidebarLink = styled(Link)`
@@ -54,6 +89,7 @@ const SidebarLink = styled(Link)`
   color: ${colors.text};
   text-decoration: none;
   border-radius: 5px;
+  transition: all 0.2s ease;
 
   &.active {
     background-color: ${colors.background};
@@ -64,18 +100,40 @@ const SidebarLink = styled(Link)`
   &:hover {
     background-color: ${colors.background};
   }
+
+  @media (max-width: 768px) {
+    padding: 15px 20px;
+    font-size: 1.1rem;
+  }
+
+  @media (max-width: 480px) {
+    padding: 18px 20px;
+    font-size: 1.2rem;
+  }
 `;
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { user, loading } = useContext(UserContext);
 
-  const commonLinks = [
-    { to: "/dashboard", label: "Dashboard", icon: <FaHome /> },
-    { to: "/attendance", label: "Attendance", icon: <FaCalendarCheck /> },
-    { to: "/documents", label: "Documents", icon: <FaFileAlt /> },
-    { to: "/leaves", label: "Leaves", icon: <FaClipboardList /> },
-  ];
+  // Get links based on user role
+  const getLinks = () => {
+    const baseLinks = [
+      { to: "/attendance", label: "Attendance", icon: <FaCalendarCheck /> },
+      { to: "/documents", label: "Documents", icon: <FaFileAlt /> },
+      { to: "/leaves", label: "Leaves", icon: <FaClipboardList /> },
+    ];
+
+    // Add Dashboard link only for admin users
+    if (user && user.role === "admin") {
+      return [
+        { to: "/dashboard", label: "Dashboard", icon: <FaHome /> },
+        ...baseLinks,
+      ];
+    }
+
+    return baseLinks;
+  };
 
   // Conditional profile/employees link based on user role
   const getProfileLink = () => {
@@ -101,20 +159,24 @@ const Sidebar = () => {
   };
 
   return (
-    <SidebarWrapper>
-      {commonLinks.map((link) => (
-        <SidebarLink
-          key={link.to}
-          to={link.to}
-          className={location.pathname === link.to ? "active" : ""}
-        >
-          {link.icon} {link.label}
-        </SidebarLink>
-      ))}
+    <>
+      <MobileOverlay $isOpen={isOpen} onClick={onClose} />
+      <SidebarWrapper $isOpen={isOpen}>
+        {getLinks().map((link) => (
+          <SidebarLink
+            key={link.to}
+            to={link.to}
+            className={location.pathname === link.to ? "active" : ""}
+            onClick={onClose}
+          >
+            {link.icon} {link.label}
+          </SidebarLink>
+        ))}
 
-      {/* Conditional Profile/Employees link */}
-      {getProfileLink()}
-    </SidebarWrapper>
+        {/* Conditional Profile/Employees link */}
+        {getProfileLink()}
+      </SidebarWrapper>
+    </>
   );
 };
 

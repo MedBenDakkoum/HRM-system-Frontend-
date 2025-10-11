@@ -34,6 +34,19 @@ const DocumentsWrapper = styled.div`
   padding: 20px 60px 40px 60px;
   min-height: calc(100vh - 70px);
   background: ${colors.background};
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    margin-top: 20px;
+    padding: 15px;
+    justify-content: center;
+  }
+
+  @media (max-width: 480px) {
+    margin-top: 15px;
+    padding: 10px;
+    justify-content: center;
+  }
 `;
 
 const Content = styled.div`
@@ -41,6 +54,13 @@ const Content = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
+  max-width: 1200px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    align-items: center;
+  }
 `;
 
 const Header = styled.div`
@@ -51,6 +71,21 @@ const Header = styled.div`
   padding: 24px 32px;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    align-items: flex-start;
+  }
+
+  @media (max-width: 480px) {
+    padding: 15px;
+    gap: 15px;
+  }
 `;
 
 const PageTitle = styled.h1`
@@ -93,12 +128,30 @@ const Controls = styled.div`
   gap: 16px;
   align-items: center;
   flex-wrap: wrap;
+  max-width: 100%;
+  overflow: visible;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
 `;
 
 const SearchInput = styled.div`
   position: relative;
   display: flex;
   align-items: center;
+  width: auto;
+
+  @media (max-width: 480px) {
+    width: 100%;
+  }
 `;
 
 const SearchBox = styled.input`
@@ -109,11 +162,21 @@ const SearchBox = styled.input`
   width: 300px;
   background: white;
   transition: all 0.2s ease;
+  box-sizing: border-box;
 
   &:focus {
     outline: none;
     border-color: ${colors.accent};
     box-shadow: 0 0 0 3px rgba(241, 133, 0, 0.1);
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  @media (max-width: 480px) {
+    width: 100%;
   }
 `;
 
@@ -121,6 +184,7 @@ const SearchIcon = styled(FaSearch)`
   position: absolute;
   left: 16px;
   color: ${colors.secondary};
+  pointer-events: none;
 `;
 
 const ModalOverlay = styled.div`
@@ -277,6 +341,12 @@ const DocumentsTable = styled.div`
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 100%;
+    align-self: center;
+  }
 `;
 
 const TableHeader = styled.div`
@@ -290,6 +360,18 @@ const TableHeader = styled.div`
   font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 12px 16px;
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr 1fr;
+    padding: 10px 12px;
+    font-size: 0.75rem;
+  }
 `;
 
 const TableRow = styled.div`
@@ -307,6 +389,16 @@ const TableRow = styled.div`
   &:hover {
     background: ${colors.background};
     transform: translateY(-1px);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 12px 16px;
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr 1fr;
+    padding: 10px 12px;
   }
 `;
 
@@ -382,6 +474,7 @@ const Documents = () => {
   const [popupType, setPopupType] = useState("success");
   const [popupMessage, setPopupMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Attestation form state
   const [attestationForm, setAttestationForm] = useState({
@@ -618,12 +711,20 @@ const Documents = () => {
     return (nameMatch || typeMatch) && !!doc.employee;
   });
 
+  const handleMenuToggle = (isOpen) => {
+    setSidebarOpen(isOpen);
+  };
+
+  const handleSidebarClose = () => {
+    setSidebarOpen(false);
+  };
+
   if (loading || !user) {
     return (
       <>
-        <Navbar />
+        <Navbar onMenuToggle={handleMenuToggle} />
         <DocumentsWrapper>
-          <Sidebar />
+          <Sidebar isOpen={sidebarOpen} onClose={handleSidebarClose} />
           <Content>
             <Loading text="Loading documents..." />
           </Content>
@@ -634,9 +735,9 @@ const Documents = () => {
 
   return (
     <>
-      <Navbar />
+      <Navbar onMenuToggle={handleMenuToggle} />
       <DocumentsWrapper>
-        <Sidebar />
+        <Sidebar isOpen={sidebarOpen} onClose={handleSidebarClose} />
         <Content>
           {/* Header */}
           <Header>

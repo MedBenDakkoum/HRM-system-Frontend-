@@ -21,33 +21,83 @@ import Loading from "../components/Loading";
 
 const AttendanceWrapper = styled.div`
   display: flex;
-  margin-left: 250px;
+  margin-left: 200px;
   margin-top: 40px;
   padding: 20px 60px 40px 60px;
   min-height: calc(100vh - 70px);
   background: #f5f7fa;
+
+  @media (max-width: 1024px) {
+    margin-left: 200px;
+    padding: 20px 40px;
+  }
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    margin-top: 20px;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+
+  @media (max-width: 480px) {
+    margin-top: 10px;
+    padding: 15px;
+  }
 `;
 
+/* Content */
 const Content = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 20px;
+
+  @media (max-width: 768px) {
+    align-items: center;
+    width: 100%;
+  }
 `;
 
+/* Card Form */
 const FormCard = styled.form`
   background-color: white;
   padding: 40px 30px;
   border-radius: 12px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-  width: 360px;
+  width: 420px;
   display: flex;
   flex-direction: column;
   gap: 15px;
   margin-bottom: 30px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  }
+
+  /* 🔽 Ensures all form elements take full width */
+  input,
+  select,
+  .react-datepicker-wrapper {
+    width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 24px 18px;
+    width: 100%;
+    max-width: 100%;
+  }
 `;
 
+/* Header */
 const FormHeader = styled.div`
   display: flex;
   flex-direction: column;
@@ -55,18 +105,28 @@ const FormHeader = styled.div`
   margin-bottom: 10px;
 `;
 
+/* Title */
 const Title = styled.h2`
   text-align: center;
   font-size: 1.5rem;
   color: #333;
   margin: 0;
+
+  @media (max-width: 480px) {
+    font-size: 1.3rem;
+  }
 `;
 
+/* Video */
 const VideoContainer = styled.div`
   position: relative;
   width: 90%;
   margin-bottom: 10px;
   display: ${(props) => (props.$show ? "block" : "none")};
+
+  @media (max-width: 480px) {
+    width: 100%;
+  }
 `;
 
 const Video = styled.video`
@@ -83,31 +143,34 @@ const Canvas = styled.canvas`
   height: auto;
 `;
 
+/* Buttons */
 const ButtonStyled = styled.button`
-  width: 99%;
+  width: 100%;
   padding: 12px;
   border-radius: 8px;
   font-weight: 600;
   font-size: 1rem;
   border: none;
-  background-color: ${(props) => (props.$stop ? "#dc3545" : "#f18500")};
+  background-color: #ff4500;
   color: white;
-  cursor: pointer;
+  cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
   transition: all 0.3s ease;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: ${(props) =>
+      props.disabled ? "none" : "0 6px 12px rgba(0, 0, 0, 0.1)"};
   }
 
-  &:disabled {
-    background-color: #ff4500;
-    cursor: not-allowed;
+  @media (max-width: 480px) {
+    font-size: 0.9rem;
+    padding: 10px;
   }
 `;
 
+/* DatePicker */
 const DatePickerStyled = styled(DatePicker)`
-  width: 90%;
+  width: 100%;
   padding: 12px 14px;
   border-radius: 8px;
   border: 1px solid #657786;
@@ -119,14 +182,30 @@ const DatePickerStyled = styled(DatePicker)`
     border-color: #f18500;
     box-shadow: 0 0 0 3px rgba(241, 133, 0, 0.2);
   }
+
+  @media (max-width: 480px) {
+    font-size: 0.9rem;
+  }
 `;
 
 const ReportCard = styled(FormCard)`
-  width: 360px;
+  width: 420px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 400px;
+    align-self: center;
+  }
+
+  @media (max-width: 480px) {
+    width: 100%;
+    max-width: 100%;
+    align-self: center;
+  }
 `;
 
 const ReportDatePicker = styled(DatePicker)`
-  width: 90%;
+  width: 100%;
   padding: 12px 14px;
   border-radius: 8px;
   border: 1px solid ${colors.primary};
@@ -138,10 +217,15 @@ const ReportDatePicker = styled(DatePicker)`
     border-color: ${colors.tertialy};
     box-shadow: 0 0 0 3px rgba(241, 133, 0, 0.2);
   }
+
+  @media (max-width: 480px) {
+    font-size: 0.9rem;
+  }
 `;
 
+/* Location button */
 const LocationButton = styled(ButtonStyled)`
-  width: 99%;
+  width: 100%;
   background-color: ${colors.primary};
   font-size: 0.95rem;
 
@@ -151,9 +235,22 @@ const LocationButton = styled(ButtonStyled)`
   }
 `;
 
+/* ATT button */
+const AttButton = styled(ButtonStyled)`
+  width: 100%;
+  background-color: #ff4500;
+  font-size: 0.95rem;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+/* Select */
 const SelectWrapper = styled.div`
   position: relative;
-  width: 98%;
+  width: 100%;
 `;
 
 const SelectStyled = styled.select`
@@ -171,6 +268,10 @@ const SelectStyled = styled.select`
     border-color: ${colors.tertialy};
     box-shadow: 0 0 0 3px rgba(241, 133, 0, 0.2);
   }
+
+  @media (max-width: 480px) {
+    font-size: 0.9rem;
+  }
 `;
 
 const SelectArrow = styled.div`
@@ -183,9 +284,10 @@ const SelectArrow = styled.div`
   color: #657786;
 `;
 
+/* Input and Date Icons */
 const DateInputWrapper = styled.div`
   position: relative;
-  width: 90%;
+  width: 100%;
 `;
 
 const DateIcon = styled(FaRegCalendarAlt)`
@@ -196,10 +298,14 @@ const DateIcon = styled(FaRegCalendarAlt)`
   color: #657786;
   pointer-events: none;
   font-size: 1rem;
+
+  @media (max-width: 480px) {
+    font-size: 0.9rem;
+  }
 `;
 
 const InputStyled = styled.input`
-  width: 90%;
+  width: 100%;
   padding: 12px 14px;
   border-radius: 8px;
   border: 1px solid ${colors.primary};
@@ -211,19 +317,40 @@ const InputStyled = styled.input`
     border-color: ${colors.tertialy};
     box-shadow: 0 0 0 3px rgba(241, 133, 0, 0.2);
   }
+
+  @media (max-width: 480px) {
+    font-size: 0.9rem;
+  }
 `;
 
+/* Layouts */
 const MainSection = styled.div`
   display: flex;
   gap: 30px;
   align-items: flex-start;
   width: 100%;
+
+  @media (max-width: 1024px) {
+    gap: 20px;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+  }
 `;
 
 const LeftColumn = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 400px;
+    align-items: center;
+  }
 `;
 
 const TableCard = styled.div`
@@ -233,12 +360,35 @@ const TableCard = styled.div`
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
   padding: 25px 20px;
   overflow-x: auto;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  }
+
+  @media (max-width: 768px) {
+    padding: 20px 15px;
+    width: 100%;
+    max-width: 100%;
+    align-self: center;
+  }
+
+  @media (max-width: 480px) {
+    padding: 15px 10px;
+    width: 100%;
+    max-width: 100%;
+    align-self: center;
+  }
 `;
 
 const TableTitle = styled.h2`
   margin: 0 0 15px 0;
   font-size: 1.3rem;
   color: #333;
+
+  @media (max-width: 480px) {
+    font-size: 1.2rem;
+  }
 `;
 
 const StyledTable = styled.table`
@@ -262,8 +412,25 @@ const StyledTable = styled.table`
   tr:hover {
     background: #fef3e7;
   }
-`;
 
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
+
+    th,
+    td {
+      padding: 10px 8px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    font-size: 0.85rem;
+
+    th,
+    td {
+      padding: 8px 6px;
+    }
+  }
+`;
 const Attendance = () => {
   const [entryTime, setEntryTime] = useState("");
   const [longitude, setLongitude] = useState("");
@@ -278,6 +445,7 @@ const Attendance = () => {
   const [period, setPeriod] = useState("weekly");
   const [startDate, setStartDate] = useState("");
   const [method, setMethod] = useState("manual");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, loading } = useContext(UserContext);
   const location = useLocation();
   const videoRef = useRef(null);
@@ -655,11 +823,19 @@ const Attendance = () => {
     return <Loading text="Loading attendance data..." />;
   }
 
+  const handleMenuToggle = (isOpen) => {
+    setSidebarOpen(isOpen);
+  };
+
+  const handleSidebarClose = () => {
+    setSidebarOpen(false);
+  };
+
   return (
     <>
-      <Navbar />
+      <Navbar onMenuToggle={handleMenuToggle} />
       <AttendanceWrapper>
-        <Sidebar />
+        <Sidebar isOpen={sidebarOpen} onClose={handleSidebarClose} />
         <Content>
           <MainSection>
             <LeftColumn>

@@ -19,8 +19,8 @@ const LoginWrapper = styled.div`
 
   @media (max-width: 480px) {
     padding: 16px;
-    align-items: flex-start;
-    padding-top: 40px;
+    align-items: center;
+    justify-content: center;
   }
 `;
 
@@ -113,7 +113,6 @@ const Input = styled.input`
   transition: border-color 0.3s ease;
   box-sizing: border-box;
   display: block;
-  margin: 0 auto;
 
   &:focus {
     border-color: ${colors.accent};
@@ -123,7 +122,6 @@ const Input = styled.input`
   @media (max-width: 480px) {
     padding: 11px 12px;
     font-size: 0.9rem;
-    width: 100%;
   }
 `;
 
@@ -199,7 +197,6 @@ const PasswordInput = styled.input`
   transition: border-color 0.3s ease;
   box-sizing: border-box;
   display: block;
-  margin: 0 auto;
 
   &:focus {
     border-color: ${colors.accent};
@@ -209,7 +206,6 @@ const PasswordInput = styled.input`
   @media (max-width: 480px) {
     padding: 11px 38px 11px 12px;
     font-size: 0.9rem;
-    width: 100%;
   }
 `;
 

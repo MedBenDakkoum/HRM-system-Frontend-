@@ -13,7 +13,20 @@ import UserContext from "../context/UserContext";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { colors } from "../styles/GlobalStyle";
-import { FaRegCalendarAlt } from "react-icons/fa";
+import {
+  FaRegCalendarAlt,
+  FaUsers,
+  FaPlus,
+  FaEdit,
+  FaTrash,
+  FaUserTie,
+  FaEnvelope,
+  FaBriefcase,
+  FaCalendar,
+  FaTimes,
+  FaCamera,
+  FaUserGraduate,
+} from "react-icons/fa";
 import * as faceapi from "face-api.js";
 import Popup from "../components/Popup";
 import Loading from "../components/Loading";
@@ -25,14 +38,463 @@ const ProfileWrapper = styled.div`
   padding: 20px 60px 40px 60px;
   min-height: calc(100vh - 70px);
   background: #f5f7fa;
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    margin-top: 20px;
+    padding: 15px;
+    justify-content: center;
+  }
+
+  @media (max-width: 480px) {
+    margin-top: 15px;
+    padding: 10px;
+    justify-content: center;
+  }
 `;
 
 const Content = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 20px;
+  max-width: 1400px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    align-items: center;
+  }
+`;
+
+// Modern Header Section
+const PageHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 24px 32px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    align-items: flex-start;
+  }
+
+  @media (max-width: 480px) {
+    padding: 15px;
+    gap: 15px;
+  }
+`;
+
+const PageTitle = styled.h1`
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  @media (max-width: 480px) {
+    font-size: 1.5rem;
+  }
+`;
+
+const AddButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: ${colors.accent || "#f18500"};
+  color: white;
+
+  &:hover {
+    background: ${colors.tertialy || "#e07b00"};
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
+`;
+
+// Employee Grid
+const EmployeesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+`;
+
+const EmployeeCard = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.15);
+    border-color: ${colors.accent || "#f18500"};
+  }
+`;
+
+const EmployeeHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+const EmployeeAvatar = styled.div`
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    ${colors.accent || "#f18500"} 0%,
+    ${colors.tertialy || "#e07b00"} 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+  flex-shrink: 0;
+`;
+
+const EmployeeActions = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+
+  @media (max-width: 480px) {
+    width: 100%;
+    margin-top: 12px;
+  }
+`;
+
+const IconButton = styled.button`
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: ${(props) =>
+    props.$variant === "delete" ? "#fee2e2" : "#dbeafe"};
+  color: ${(props) => (props.$variant === "delete" ? "#dc2626" : "#2563eb")};
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background: ${(props) =>
+      props.$variant === "delete" ? "#fecaca" : "#bfdbfe"};
+  }
+
+  @media (max-width: 480px) {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+`;
+
+const EmployeeName = styled.h3`
+  margin: 0 0 8px 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+`;
+
+const EmployeeRole = styled.span`
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: ${(props) => {
+    if (props.$role === "admin") return "#dbeafe";
+    if (props.$role === "stagiaire") return "#fef3c7";
+    return "#d1fae5";
+  }};
+  color: ${(props) => {
+    if (props.$role === "admin") return "#2563eb";
+    if (props.$role === "stagiaire") return "#d97706";
+    return "#059669";
+  }};
+  margin-bottom: 12px;
+`;
+
+const EmployeeDetail = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 8px;
+
+  svg {
+    color: ${colors.primary || "#85929E"};
+    flex-shrink: 0;
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+`;
+
+// Modal for Add/Edit Employee
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  padding: 20px;
+`;
+
+const ModalCard = styled.div`
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+`;
+
+const ModalHeader = styled.div`
+  padding: 24px 32px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+`;
+
+const ModalTitle = styled.h2`
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #374151;
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const FormLabel = styled.label`
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const FormInput = styled.input`
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: ${colors.accent || "#f18500"};
+    box-shadow: 0 0 0 3px rgba(241, 133, 0, 0.1);
+  }
+`;
+
+const FormSelect = styled.select`
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: ${colors.accent || "#f18500"};
+    box-shadow: 0 0 0 3px rgba(241, 133, 0, 0.1);
+  }
+`;
+
+const FormTextArea = styled.textarea`
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: ${colors.accent || "#f18500"};
+    box-shadow: 0 0 0 3px rgba(241, 133, 0, 0.1);
+  }
+`;
+
+const ModalFooter = styled.div`
+  padding: 24px 32px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  position: sticky;
+  bottom: 0;
+  background: white;
+`;
+
+const ModalButton = styled.button`
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+
+  &.cancel {
+    background: transparent;
+    color: #6b7280;
+    border: 2px solid #e5e7eb;
+  }
+
+  &.submit {
+    background: ${colors.accent || "#f18500"};
+    color: white;
+  }
+
+  &.submit:hover:not(:disabled) {
+    background: ${colors.tertialy || "#e07b00"};
+    transform: translateY(-1px);
+  }
+
+  &.cancel:hover {
+    background: #f9fafb;
+    color: #374151;
+  }
+
+  &:disabled {
+    background: #d1d5db;
+    color: #6b7280;
+    cursor: not-allowed;
+  }
+`;
+
+const EmptyState = styled.div`
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 80px 20px;
+  background: white;
+  border-radius: 12px;
+`;
+
+const EmptyIcon = styled(FaUsers)`
+  font-size: 4rem;
+  margin-bottom: 16px;
+  opacity: 0.3;
+  color: ${colors.primary || "#85929E"};
+`;
+
+const SectionDivider = styled.div`
+  margin: 8px 0;
+  border-top: 1px solid #e5e7eb;
 `;
 
 const FormCard = styled.form`
@@ -45,6 +507,20 @@ const FormCard = styled.form`
   flex-direction: column;
   gap: 15px;
   margin-bottom: 30px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 400px;
+    padding: 30px 25px;
+    margin: 0 auto 20px auto;
+  }
+
+  @media (max-width: 480px) {
+    padding: 25px 20px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 100%;
+  }
 `;
 
 const ProfileCard = styled.div`
@@ -57,6 +533,22 @@ const ProfileCard = styled.div`
   flex-direction: column;
   gap: 15px;
   margin-bottom: 30px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 400px;
+    padding: 30px 25px;
+    margin: 0 auto 20px auto;
+    align-self: center;
+  }
+
+  @media (max-width: 480px) {
+    padding: 25px 20px;
+    margin: 0 auto 20px auto;
+    width: 100%;
+    max-width: 100%;
+    align-self: center;
+  }
 `;
 
 const FormHeader = styled.div`
@@ -118,13 +610,14 @@ const ButtonStyled = styled.button`
 `;
 
 const InputStyled = styled.input`
-  width: 90%;
+  width: 100%;
   padding: 12px 14px;
   border-radius: 8px;
   border: 1px solid ${colors.primary};
   font-size: 0.95rem;
   outline: none;
   transition: all 0.3s ease;
+  box-sizing: border-box;
 
   &:focus {
     border-color: ${colors.tertialy};
@@ -133,13 +626,14 @@ const InputStyled = styled.input`
 `;
 
 const SelectStyled = styled.select`
-  width: 90%;
+  width: 100%;
   padding: 12px 14px;
   border-radius: 8px;
   border: 1px solid ${colors.primary};
   font-size: 0.95rem;
   outline: none;
   transition: all 0.3s ease;
+  box-sizing: border-box;
 
   &:focus {
     border-color: ${colors.tertialy};
@@ -189,6 +683,7 @@ const Profile = () => {
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupType, setPopupType] = useState("success");
   const [popupMessage, setPopupMessage] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Add User functionality from second code
   const [showAddForm, setShowAddForm] = useState(false);
@@ -463,261 +958,508 @@ const Profile = () => {
   if (loading || !employeeData)
     return <Loading text="Loading profile data..." />;
 
+  const handleMenuToggle = (isOpen) => {
+    setSidebarOpen(isOpen);
+  };
+
+  const handleSidebarClose = () => {
+    setSidebarOpen(false);
+  };
+
   return (
     <>
-      <Navbar />
+      <Navbar onMenuToggle={handleMenuToggle} />
       <ProfileWrapper>
-        <Sidebar />
+        <Sidebar isOpen={sidebarOpen} onClose={handleSidebarClose} />
         <Content>
           {user.role === "admin" ? (
             <>
-              {/* Add User functionality from second code */}
-              <ButtonStyled
-                type="button"
-                onClick={() => setShowAddForm(!showAddForm)}
-              >
-                {showAddForm ? "Cancel" : "Add User"}
-              </ButtonStyled>
+              {/* Modern Header */}
+              <PageHeader>
+                <PageTitle>
+                  <FaUsers />
+                  Employee Management
+                </PageTitle>
+                <AddButton onClick={() => setShowAddForm(true)}>
+                  <FaPlus />
+                  Add Employee
+                </AddButton>
+              </PageHeader>
+
+              {/* Employees Grid */}
+              <EmployeesGrid>
+                {employees.length === 0 ? (
+                  <EmptyState>
+                    <EmptyIcon />
+                    <h3 style={{ color: "#374151", marginBottom: "8px" }}>
+                      No Employees Yet
+                    </h3>
+                    <p style={{ color: "#6b7280" }}>
+                      Click "Add Employee" to create your first employee
+                    </p>
+                  </EmptyState>
+                ) : (
+                  employees.map((emp) => (
+                    <EmployeeCard key={emp._id}>
+                      <EmployeeHeader>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "16px",
+                            flex: 1,
+                            minWidth: 0,
+                          }}
+                        >
+                          <EmployeeAvatar>
+                            {emp.name ? emp.name.charAt(0).toUpperCase() : "E"}
+                          </EmployeeAvatar>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <EmployeeName>{emp.name}</EmployeeName>
+                            <EmployeeRole $role={emp.role}>
+                              {emp.role === "stagiaire" ? "Intern" : emp.role}
+                            </EmployeeRole>
+                          </div>
+                        </div>
+                        <EmployeeActions>
+                          <IconButton
+                            onClick={() => {
+                              setSelectedEmployeeId(emp._id);
+                            }}
+                            title="Edit employee"
+                          >
+                            <FaEdit />
+                            Edit
+                          </IconButton>
+                          <IconButton
+                            $variant="delete"
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  `Are you sure you want to delete ${emp.name}?`
+                                )
+                              ) {
+                                // Add delete functionality
+                                showPopup(
+                                  "success",
+                                  "Delete functionality to be implemented"
+                                );
+                              }
+                            }}
+                            title="Delete employee"
+                          >
+                            <FaTrash />
+                            Delete
+                          </IconButton>
+                        </EmployeeActions>
+                      </EmployeeHeader>
+
+                      <EmployeeDetail>
+                        <FaEnvelope />
+                        <span>{emp.email}</span>
+                      </EmployeeDetail>
+
+                      <EmployeeDetail>
+                        <FaBriefcase />
+                        <span>{emp.position || "No position assigned"}</span>
+                      </EmployeeDetail>
+
+                      {emp.hireDate && (
+                        <EmployeeDetail>
+                          <FaCalendar />
+                          <span>
+                            Hired: {new Date(emp.hireDate).toLocaleDateString()}
+                          </span>
+                        </EmployeeDetail>
+                      )}
+                    </EmployeeCard>
+                  ))
+                )}
+              </EmployeesGrid>
+
+              {/* Add Employee Modal */}
               {showAddForm && (
-                <FormCard onSubmit={handleAddUser}>
-                  <FormHeader>
-                    <Title>Add New User</Title>
-                  </FormHeader>
-                  <InputStyled
-                    placeholder="Name"
-                    value={newUser.name}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, name: e.target.value })
-                    }
-                  />
-                  <InputStyled
-                    placeholder="Email"
-                    value={newUser.email}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, email: e.target.value })
-                    }
-                  />
-                  <InputStyled
-                    type="password"
-                    placeholder="Password"
-                    value={newUser.password}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, password: e.target.value })
-                    }
-                  />
-                  <SelectStyled
-                    value={newUser.role}
-                    onChange={(e) =>
-                      setNewUser({
-                        ...newUser,
-                        role: e.target.value,
-                        // Clear hireDate when switching to stagiaire
-                        hireDate:
-                          e.target.value === "employee" ? newUser.hireDate : "",
-                      })
-                    }
-                  >
-                    <option value="employee">Employee</option>
-                    <option value="stagiaire">Stagiaire</option>
-                  </SelectStyled>
-                  <InputStyled
-                    placeholder="Position"
-                    value={newUser.position}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, position: e.target.value })
-                    }
-                  />
-                  {/* Show Hire Date only for employees */}
-                  {newUser.role === "employee" && (
-                    <>
-                      <label
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "#666",
-                          marginTop: "10px",
-                        }}
-                      >
-                        Hire Date:
-                      </label>
-                      <InputStyled
-                        type="date"
-                        value={newUser.hireDate}
-                        onChange={(e) =>
-                          setNewUser({ ...newUser, hireDate: e.target.value })
-                        }
-                      />
-                    </>
-                  )}
-                  {newUser.role === "stagiaire" && (
-                    <>
-                      <h4
-                        style={{
-                          fontSize: "1.1rem",
-                          color: "#333",
-                          margin: "15px 0 10px 0",
-                        }}
-                      >
-                        Internship Details
-                      </h4>
-                      <label
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "#666",
-                          marginTop: "10px",
-                        }}
-                      >
-                        Start Date:
-                      </label>
-                      <InputStyled
-                        type="date"
-                        value={newUser.internshipDetails.startDate}
-                        onChange={(e) =>
-                          setNewUser({
-                            ...newUser,
-                            internshipDetails: {
-                              ...newUser.internshipDetails,
-                              startDate: e.target.value,
-                            },
-                          })
-                        }
-                      />
-                      <label
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "#666",
-                          marginTop: "10px",
-                        }}
-                      >
-                        End Date:
-                      </label>
-                      <InputStyled
-                        type="date"
-                        value={newUser.internshipDetails.endDate}
-                        onChange={(e) =>
-                          setNewUser({
-                            ...newUser,
-                            internshipDetails: {
-                              ...newUser.internshipDetails,
-                              endDate: e.target.value,
-                            },
-                          })
-                        }
-                      />
-                      <InputStyled
-                        placeholder="Supervisor"
-                        value={newUser.internshipDetails.supervisor}
-                        onChange={(e) =>
-                          setNewUser({
-                            ...newUser,
-                            internshipDetails: {
-                              ...newUser.internshipDetails,
-                              supervisor: e.target.value,
-                            },
-                          })
-                        }
-                      />
-                      <InputStyled
-                        placeholder="Objectives"
-                        value={newUser.internshipDetails.objectives}
-                        onChange={(e) =>
-                          setNewUser({
-                            ...newUser,
-                            internshipDetails: {
-                              ...newUser.internshipDetails,
-                              objectives: e.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </>
-                  )}
-                  <ButtonStyled type="submit">Create User</ButtonStyled>
-                </FormCard>
+                <ModalOverlay onClick={() => setShowAddForm(false)}>
+                  <ModalCard onClick={(e) => e.stopPropagation()}>
+                    <ModalHeader>
+                      <ModalTitle>
+                        <FaPlus />
+                        Add New Employee
+                      </ModalTitle>
+                      <CloseButton onClick={() => setShowAddForm(false)}>
+                        <FaTimes />
+                      </CloseButton>
+                    </ModalHeader>
+                    <form onSubmit={handleAddUser}>
+                      <ModalBody>
+                        <FormGroup>
+                          <FormLabel>
+                            <FaUserTie />
+                            Full Name *
+                          </FormLabel>
+                          <FormInput
+                            placeholder="Enter full name"
+                            value={newUser.name}
+                            onChange={(e) =>
+                              setNewUser({ ...newUser, name: e.target.value })
+                            }
+                            required
+                          />
+                        </FormGroup>
+
+                        <FormGroup>
+                          <FormLabel>
+                            <FaEnvelope />
+                            Email Address *
+                          </FormLabel>
+                          <FormInput
+                            type="email"
+                            placeholder="Enter email address"
+                            value={newUser.email}
+                            onChange={(e) =>
+                              setNewUser({ ...newUser, email: e.target.value })
+                            }
+                            required
+                          />
+                        </FormGroup>
+
+                        <FormGroup>
+                          <FormLabel>Password *</FormLabel>
+                          <FormInput
+                            type="password"
+                            placeholder="Enter password"
+                            value={newUser.password}
+                            onChange={(e) =>
+                              setNewUser({
+                                ...newUser,
+                                password: e.target.value,
+                              })
+                            }
+                            required
+                          />
+                        </FormGroup>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: "16px",
+                          }}
+                        >
+                          <FormGroup>
+                            <FormLabel>Role *</FormLabel>
+                            <FormSelect
+                              value={newUser.role}
+                              onChange={(e) =>
+                                setNewUser({
+                                  ...newUser,
+                                  role: e.target.value,
+                                  hireDate:
+                                    e.target.value === "employee"
+                                      ? newUser.hireDate
+                                      : "",
+                                })
+                              }
+                            >
+                              <option value="employee">Employee</option>
+                              <option value="stagiaire">Intern</option>
+                            </FormSelect>
+                          </FormGroup>
+
+                          <FormGroup>
+                            <FormLabel>
+                              <FaBriefcase />
+                              Position
+                            </FormLabel>
+                            <FormInput
+                              placeholder="Enter position"
+                              value={newUser.position}
+                              onChange={(e) =>
+                                setNewUser({
+                                  ...newUser,
+                                  position: e.target.value,
+                                })
+                              }
+                            />
+                          </FormGroup>
+                        </div>
+
+                        {newUser.role === "employee" && (
+                          <FormGroup>
+                            <FormLabel>
+                              <FaCalendar />
+                              Hire Date
+                            </FormLabel>
+                            <FormInput
+                              type="date"
+                              value={newUser.hireDate}
+                              onChange={(e) =>
+                                setNewUser({
+                                  ...newUser,
+                                  hireDate: e.target.value,
+                                })
+                              }
+                            />
+                          </FormGroup>
+                        )}
+
+                        {newUser.role === "stagiaire" && (
+                          <>
+                            <SectionDivider />
+                            <h4
+                              style={{
+                                margin: "0",
+                                color: "#374151",
+                                fontSize: "1.1rem",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                              }}
+                            >
+                              <FaUserGraduate />
+                              Internship Details
+                            </h4>
+
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "1fr 1fr",
+                                gap: "16px",
+                              }}
+                            >
+                              <FormGroup>
+                                <FormLabel>Start Date</FormLabel>
+                                <FormInput
+                                  type="date"
+                                  value={newUser.internshipDetails.startDate}
+                                  onChange={(e) =>
+                                    setNewUser({
+                                      ...newUser,
+                                      internshipDetails: {
+                                        ...newUser.internshipDetails,
+                                        startDate: e.target.value,
+                                      },
+                                    })
+                                  }
+                                />
+                              </FormGroup>
+
+                              <FormGroup>
+                                <FormLabel>End Date</FormLabel>
+                                <FormInput
+                                  type="date"
+                                  value={newUser.internshipDetails.endDate}
+                                  onChange={(e) =>
+                                    setNewUser({
+                                      ...newUser,
+                                      internshipDetails: {
+                                        ...newUser.internshipDetails,
+                                        endDate: e.target.value,
+                                      },
+                                    })
+                                  }
+                                />
+                              </FormGroup>
+                            </div>
+
+                            <FormGroup>
+                              <FormLabel>Supervisor</FormLabel>
+                              <FormInput
+                                placeholder="Enter supervisor name"
+                                value={newUser.internshipDetails.supervisor}
+                                onChange={(e) =>
+                                  setNewUser({
+                                    ...newUser,
+                                    internshipDetails: {
+                                      ...newUser.internshipDetails,
+                                      supervisor: e.target.value,
+                                    },
+                                  })
+                                }
+                              />
+                            </FormGroup>
+
+                            <FormGroup>
+                              <FormLabel>Objectives</FormLabel>
+                              <FormTextArea
+                                placeholder="Enter internship objectives..."
+                                value={newUser.internshipDetails.objectives}
+                                onChange={(e) =>
+                                  setNewUser({
+                                    ...newUser,
+                                    internshipDetails: {
+                                      ...newUser.internshipDetails,
+                                      objectives: e.target.value,
+                                    },
+                                  })
+                                }
+                              />
+                            </FormGroup>
+                          </>
+                        )}
+                      </ModalBody>
+                      <ModalFooter>
+                        <ModalButton
+                          type="button"
+                          className="cancel"
+                          onClick={() => setShowAddForm(false)}
+                        >
+                          Cancel
+                        </ModalButton>
+                        <ModalButton type="submit" className="submit">
+                          Create Employee
+                        </ModalButton>
+                      </ModalFooter>
+                    </form>
+                  </ModalCard>
+                </ModalOverlay>
               )}
 
-              <FormCard>
-                <FormHeader>
-                  <Title>Select Employee</Title>
-                </FormHeader>
-                <SelectStyled
-                  value={selectedEmployeeId}
-                  onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                >
-                  <option value="">Select an employee</option>
-                  {employees.map((emp) => (
-                    <option key={emp._id} value={emp._id}>
-                      {emp.name} ({emp.email})
-                    </option>
-                  ))}
-                </SelectStyled>
-              </FormCard>
-              <FormCard onSubmit={handleUpdateProfile}>
-                <FormHeader>
-                  <Title>Update Profile</Title>
-                </FormHeader>
-                <InputStyled
-                  placeholder="Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-                <InputStyled
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-                <InputStyled
-                  placeholder="Position"
-                  value={position}
-                  onChange={(e) => setPosition(e.target.value)}
-                />
-                <DateInputWrapper>
-                  <DatePicker
-                    selected={hireDate}
-                    onChange={(date) => setHireDate(date)}
-                    placeholderText="Hire Date"
-                    dateFormat="dd/MM/yyyy"
-                    showMonthDropdown
-                    showYearDropdown
-                    dropdownMode="select"
-                    isClearable
-                  />
-                  <DateIcon />
-                </DateInputWrapper>
-                <InputStyled
-                  placeholder="QR Code"
-                  value={qrCode}
-                  onChange={(e) => setQrCode(e.target.value)}
-                />
-                <ButtonStyled type="submit" disabled={!name || !email}>
-                  Update Profile
-                </ButtonStyled>
-              </FormCard>
-              <FormCard as="div">
-                <FormHeader>
-                  <Title>Register Face</Title>
-                </FormHeader>
-                <VideoContainer $show={showCamera}>
-                  <Video ref={videoRef} autoPlay muted />
-                  <Canvas ref={null} />
-                </VideoContainer>
-                <ButtonStyled
-                  type="button"
-                  onClick={handleRegisterFace}
-                  disabled={!modelsLoaded || !selectedEmployeeId}
-                >
-                  Register Face
-                </ButtonStyled>
-                {showCamera && (
-                  <ButtonStyled
-                    type="button"
-                    $stop
-                    onClick={stopCamera}
-                    disabled={!showCamera}
-                  >
-                    Stop Camera
-                  </ButtonStyled>
-                )}
-              </FormCard>
+              {/* Edit Employee Modal - Shows when employee is selected */}
+              {selectedEmployeeId && (
+                <ModalOverlay onClick={() => setSelectedEmployeeId("")}>
+                  <ModalCard onClick={(e) => e.stopPropagation()}>
+                    <ModalHeader>
+                      <ModalTitle>
+                        <FaEdit />
+                        Edit Employee
+                      </ModalTitle>
+                      <CloseButton onClick={() => setSelectedEmployeeId("")}>
+                        <FaTimes />
+                      </CloseButton>
+                    </ModalHeader>
+                    <form onSubmit={handleUpdateProfile}>
+                      <ModalBody>
+                        <FormGroup>
+                          <FormLabel>
+                            <FaUserTie />
+                            Full Name *
+                          </FormLabel>
+                          <FormInput
+                            placeholder="Enter full name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                          />
+                        </FormGroup>
+
+                        <FormGroup>
+                          <FormLabel>
+                            <FaEnvelope />
+                            Email Address *
+                          </FormLabel>
+                          <FormInput
+                            type="email"
+                            placeholder="Enter email address"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                          />
+                        </FormGroup>
+
+                        <FormGroup>
+                          <FormLabel>
+                            <FaBriefcase />
+                            Position
+                          </FormLabel>
+                          <FormInput
+                            placeholder="Enter position"
+                            value={position}
+                            onChange={(e) => setPosition(e.target.value)}
+                          />
+                        </FormGroup>
+
+                        <FormGroup>
+                          <FormLabel>
+                            <FaCalendar />
+                            Hire Date
+                          </FormLabel>
+                          <FormInput
+                            type="date"
+                            value={
+                              hireDate
+                                ? new Date(hireDate).toISOString().split("T")[0]
+                                : ""
+                            }
+                            onChange={(e) =>
+                              setHireDate(
+                                e.target.value ? new Date(e.target.value) : null
+                              )
+                            }
+                          />
+                        </FormGroup>
+
+                        <FormGroup>
+                          <FormLabel>QR Code</FormLabel>
+                          <FormInput
+                            placeholder="Enter QR code"
+                            value={qrCode}
+                            onChange={(e) => setQrCode(e.target.value)}
+                          />
+                        </FormGroup>
+
+                        <SectionDivider />
+
+                        <FormGroup>
+                          <FormLabel>
+                            <FaCamera />
+                            Face Recognition
+                          </FormLabel>
+                          <VideoContainer
+                            $show={showCamera}
+                            style={{ width: "100%", margin: "10px 0" }}
+                          >
+                            <Video ref={videoRef} autoPlay muted />
+                          </VideoContainer>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "12px",
+                              width: "100%",
+                            }}
+                          >
+                            <ModalButton
+                              type="button"
+                              className="submit"
+                              onClick={handleRegisterFace}
+                              disabled={!modelsLoaded}
+                              style={{ flex: 1, minWidth: "auto" }}
+                            >
+                              {showCamera ? "Capture Face" : "Start Camera"}
+                            </ModalButton>
+                            {showCamera && (
+                              <ModalButton
+                                type="button"
+                                className="cancel"
+                                onClick={stopCamera}
+                                style={{ flex: 1, minWidth: "auto" }}
+                              >
+                                Stop Camera
+                              </ModalButton>
+                            )}
+                          </div>
+                        </FormGroup>
+                      </ModalBody>
+                      <ModalFooter>
+                        <ModalButton
+                          type="button"
+                          className="cancel"
+                          onClick={() => setSelectedEmployeeId("")}
+                        >
+                          Cancel
+                        </ModalButton>
+                        <ModalButton
+                          type="submit"
+                          className="submit"
+                          disabled={!name || !email}
+                        >
+                          Update Employee
+                        </ModalButton>
+                      </ModalFooter>
+                    </form>
+                  </ModalCard>
+                </ModalOverlay>
+              )}
             </>
           ) : (
             <ProfileCard>

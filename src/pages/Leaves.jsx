@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import styled from "styled-components";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
@@ -31,6 +31,19 @@ const LeavesWrapper = styled.div`
   padding: 20px 60px 40px 60px;
   min-height: calc(100vh - 70px);
   background: #f5f7fa;
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    margin-top: 20px;
+    padding: 15px;
+    justify-content: center;
+  }
+
+  @media (max-width: 480px) {
+    margin-top: 15px;
+    padding: 10px;
+    justify-content: center;
+  }
 `;
 
 const Content = styled.div`
@@ -38,6 +51,13 @@ const Content = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
+  max-width: 1200px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    align-items: center;
+  }
 `;
 
 const Header = styled.div`
@@ -48,6 +68,21 @@ const Header = styled.div`
   padding: 24px 32px;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    align-items: flex-start;
+  }
+
+  @media (max-width: 480px) {
+    padding: 15px;
+    gap: 15px;
+  }
 `;
 
 const PageTitle = styled.h1`
@@ -91,27 +126,55 @@ const Controls = styled.div`
   gap: 16px;
   align-items: center;
   flex-wrap: wrap;
+  max-width: 100%;
+  overflow: visible;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
 `;
 
 const SearchInput = styled.div`
   position: relative;
   display: flex;
   align-items: center;
+  width: auto;
+
+  @media (max-width: 480px) {
+    width: 100%;
+  }
 `;
 
 const SearchBox = styled.input`
   padding: 12px 16px 12px 44px;
-  border: 2px solid ${colors.secondary || "#e5e7eb"};
+  border: 2px solid ${colors.secondary || "#9ca3af"};
   border-radius: 8px;
   font-size: 0.95rem;
   width: 300px;
   background: white;
   transition: all 0.2s ease;
+  box-sizing: border-box;
 
   &:focus {
     outline: none;
     border-color: ${colors.accent || "#f18500"};
     box-shadow: 0 0 0 3px rgba(241, 133, 0, 0.1);
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  @media (max-width: 480px) {
+    width: 100%;
   }
 `;
 
@@ -119,6 +182,16 @@ const SearchIcon = styled(FaSearch)`
   position: absolute;
   left: 16px;
   color: ${colors.secondary || "#9ca3af"};
+  pointer-events: none;
+`;
+
+const FilterWrapper = styled.div`
+  position: relative;
+  display: inline-block;
+
+  @media (max-width: 480px) {
+    width: 100%;
+  }
 `;
 
 const FilterButton = styled.button`
@@ -126,18 +199,96 @@ const FilterButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  border: 2px solid ${colors.secondary || "#e5e7eb"};
+  border: 2px solid ${colors.secondary || "#9ca3af"};
   border-radius: 8px;
+  font-size: 0.95rem;
   background: white;
-  color: ${colors.text || "#374151"};
-  font-weight: 500;
+  color: ${colors.text || "#1f2937"};
   cursor: pointer;
   transition: all 0.2s ease;
+  box-sizing: border-box;
+  min-width: 150px;
+  justify-content: space-between;
 
   &:hover {
     border-color: ${colors.accent || "#f18500"};
+    background: ${colors.background || "#f5f7fa"};
+  }
+
+  &.active {
+    border-color: ${colors.accent || "#f18500"};
+    background: ${colors.background || "#f5f7fa"};
+  }
+
+  @media (max-width: 480px) {
+    width: 100%;
+    justify-content: space-between;
+  }
+`;
+
+const FilterDropdown = styled.div`
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border: 2px solid ${colors.accent || "#f18500"};
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 150px;
+  overflow: hidden;
+  animation: slideDown 0.2s ease;
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 480px) {
+    right: auto;
+    left: 0;
+    width: 100%;
+  }
+`;
+
+const FilterOption = styled.div`
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  color: ${colors.text || "#1f2937"};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  &:hover {
+    background: ${colors.background || "#f5f7fa"};
+    color: ${colors.accent || "#f18500"};
+  }
+
+  &.selected {
     background: ${colors.accent || "#f18500"};
     color: white;
+    font-weight: 600;
+  }
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #e5e7eb;
+  }
+`;
+
+const DropdownIcon = styled.span`
+  transition: transform 0.2s ease;
+  display: inline-block;
+
+  &.open {
+    transform: rotate(180deg);
   }
 `;
 
@@ -311,6 +462,12 @@ const LeavesTable = styled.div`
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 100%;
+    align-self: center;
+  }
 `;
 
 const TableHeader = styled.div`
@@ -439,6 +596,8 @@ const Leaves = () => {
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupType, setPopupType] = useState("success");
   const [popupMessage, setPopupMessage] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
 
   // Leave request form state
   const [requestForm, setRequestForm] = useState({
@@ -450,14 +609,14 @@ const Leaves = () => {
   // Approve modal state
   const [approveStatus, setApproveStatus] = useState("approved");
 
-  const showPopup = (type, message) => {
+  const showPopup = useCallback((type, message) => {
     setPopupType(type);
     setPopupMessage(message);
     setPopupVisible(true);
-  };
+  }, []);
 
   // Fetch leaves based on user role
-  const fetchLeaves = async () => {
+  const fetchLeaves = useCallback(async () => {
     setLoading(true);
     try {
       let response;
@@ -474,18 +633,36 @@ const Leaves = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user.role, user.id, showPopup]);
 
   useEffect(() => {
     fetchLeaves();
-  }, [user]);
+  }, [user, fetchLeaves]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterDropdownOpen && !event.target.closest(".filter-wrapper")) {
+        setFilterDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [filterDropdownOpen]);
 
   // Filter and search leaves
   const filteredLeaves = leaves
     .filter((leave) => {
       const matchesSearch =
-        leave.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        leave.employee.name.toLowerCase().includes(searchTerm.toLowerCase());
+        searchTerm === "" ||
+        (leave.reason &&
+          leave.reason.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (leave.employee &&
+          leave.employee.name &&
+          leave.employee.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchesStatus =
         filterStatus === "all" || leave.status === filterStatus;
@@ -575,12 +752,20 @@ const Leaves = () => {
     }
   };
 
+  const handleMenuToggle = (isOpen) => {
+    setSidebarOpen(isOpen);
+  };
+
+  const handleSidebarClose = () => {
+    setSidebarOpen(false);
+  };
+
   if (loading) {
     return (
       <>
-        <Navbar />
+        <Navbar onMenuToggle={handleMenuToggle} />
         <LeavesWrapper>
-          <Sidebar />
+          <Sidebar isOpen={sidebarOpen} onClose={handleSidebarClose} />
           <Content>
             <Loading text="Loading leaves..." />
           </Content>
@@ -591,9 +776,9 @@ const Leaves = () => {
 
   return (
     <>
-      <Navbar />
+      <Navbar onMenuToggle={handleMenuToggle} />
       <LeavesWrapper>
-        <Sidebar />
+        <Sidebar isOpen={sidebarOpen} onClose={handleSidebarClose} />
         <Content>
           {/* Header */}
           <Header>
@@ -621,10 +806,77 @@ const Leaves = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </SearchInput>
-                <FilterButton onClick={() => {}}>
-                  <FaFilter />
-                  {filterStatus === "all" ? "All Status" : filterStatus}
-                </FilterButton>
+                <FilterWrapper className="filter-wrapper">
+                  <FilterButton
+                    className={filterDropdownOpen ? "active" : ""}
+                    onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
+                  >
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <FaFilter />
+                      {filterStatus === "all"
+                        ? "All Status"
+                        : filterStatus.charAt(0).toUpperCase() +
+                          filterStatus.slice(1)}
+                    </span>
+                    <DropdownIcon className={filterDropdownOpen ? "open" : ""}>
+                      ▾
+                    </DropdownIcon>
+                  </FilterButton>
+                  {filterDropdownOpen && (
+                    <FilterDropdown>
+                      <FilterOption
+                        className={filterStatus === "all" ? "selected" : ""}
+                        onClick={() => {
+                          setFilterStatus("all");
+                          setFilterDropdownOpen(false);
+                        }}
+                      >
+                        All Status
+                        {filterStatus === "all" && <FaCheck />}
+                      </FilterOption>
+                      <FilterOption
+                        className={filterStatus === "pending" ? "selected" : ""}
+                        onClick={() => {
+                          setFilterStatus("pending");
+                          setFilterDropdownOpen(false);
+                        }}
+                      >
+                        Pending
+                        {filterStatus === "pending" && <FaCheck />}
+                      </FilterOption>
+                      <FilterOption
+                        className={
+                          filterStatus === "approved" ? "selected" : ""
+                        }
+                        onClick={() => {
+                          setFilterStatus("approved");
+                          setFilterDropdownOpen(false);
+                        }}
+                      >
+                        Approved
+                        {filterStatus === "approved" && <FaCheck />}
+                      </FilterOption>
+                      <FilterOption
+                        className={
+                          filterStatus === "rejected" ? "selected" : ""
+                        }
+                        onClick={() => {
+                          setFilterStatus("rejected");
+                          setFilterDropdownOpen(false);
+                        }}
+                      >
+                        Rejected
+                        {filterStatus === "rejected" && <FaCheck />}
+                      </FilterOption>
+                    </FilterDropdown>
+                  )}
+                </FilterWrapper>
               </Controls>
             )}
           </Header>
