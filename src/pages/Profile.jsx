@@ -440,14 +440,15 @@ const ModalFooter = styled.div`
 `;
 
 const ModalButton = styled.button`
-  padding: 12px 24px;
-  border: none;
+  width: 90%;
+  padding: 12px 14px;
+  border: 1px solid ${colors.primary};
   border-radius: 8px;
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 100px;
+  box-sizing: border-box;
 
   &.cancel {
     background: transparent;
@@ -909,6 +910,38 @@ const Profile = () => {
     stopCamera,
     showPopup,
   ]);
+
+  // QR Code generation function
+  const generateQRCode = useCallback(async () => {
+    try {
+      const employeeId =
+        user.role === "admin" ? selectedEmployeeId || user.id : user.id;
+
+      if (!employeeId) {
+        showPopup("error", "Employee ID not found");
+        return;
+      }
+
+      showPopup("success", "Generating QR code...");
+
+      const response = await api(`/api/attendance/qr/${employeeId}`, "GET");
+
+      if (response.data && response.data.qrCodeUrl) {
+        setQrCode(response.data.qrCodeUrl);
+        // Update employeeData to trigger re-render
+        setEmployeeData((prevData) => ({
+          ...prevData,
+          qrCode: response.data.qrCodeUrl,
+        }));
+        showPopup("success", "QR code generated successfully!");
+      } else {
+        showPopup("error", "Failed to generate QR code");
+      }
+    } catch (error) {
+      console.error("Error generating QR code:", error);
+      showPopup("error", "Failed to generate QR code. Please try again.");
+    }
+  }, [user, selectedEmployeeId, showPopup]);
 
   // Add User functionality from second code
   const handleAddUser = async (e) => {
@@ -1478,8 +1511,39 @@ const Profile = () => {
                   : "N/A"}
               </DetailText>
               <DetailText>
-                QR Code: {employeeData.qrCode || "Not set"}
+                QR Code: {employeeData.qrCode ? "Generated" : "Not generated"}
               </DetailText>
+              {employeeData.qrCode && (
+                <div style={{ textAlign: "center", margin: "10px 0" }}>
+                  <img
+                    src={employeeData.qrCode}
+                    alt="QR Code"
+                    style={{
+                      maxWidth: "200px",
+                      maxHeight: "200px",
+                      border: "1px solid #ddd",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      fontSize: "0.85rem",
+                      color: "#666",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    ⏰ Valid for 12 hours from generation
+                  </div>
+                </div>
+              )}
+              <ModalButton
+                type="button"
+                className="submit"
+                onClick={generateQRCode}
+              >
+                Generate QR Code
+              </ModalButton>
               <DetailText>
                 Face Template:{" "}
                 {employeeData.faceDescriptor ? "Registered" : "Not registered"}

@@ -1,10 +1,9 @@
 import React, { useState, useContext, useCallback } from "react";
 import styled from "styled-components";
 import api from "../utils/api";
-import { useNavigate, Link } from "react-router-dom";
-import { colors } from "../styles/GlobalStyle";
+import { useNavigate } from "react-router-dom";
 import UserContext from "../context/UserContext";
-import { FaSignInAlt, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaUserCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import Loading from "../components/Loading";
 import Popup from "../components/Popup";
 
@@ -15,40 +14,69 @@ const LoginWrapper = styled.div`
   align-items: center;
   min-height: 100vh;
   padding: 20px;
-  background: linear-gradient(135deg, ${colors.background} 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #85929e 0%, #657786 100%);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.08) 1px,
+      transparent 1px
+    );
+    background-size: 50px 50px;
+    animation: moveBackground 20s linear infinite;
+  }
+
+  @keyframes moveBackground {
+    0% {
+      transform: translate(0, 0);
+    }
+    100% {
+      transform: translate(50px, 50px);
+    }
+  }
 
   @media (max-width: 480px) {
     padding: 16px;
-    align-items: center;
-    justify-content: center;
   }
 `;
 
 const Form = styled.form`
-  background-color: white;
-  padding: 40px 30px;
-  border-radius: 12px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-  width: 350px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  padding: 40px 36px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 400px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+    transform: translateY(-4px);
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
   }
 
   @media (max-width: 480px) {
     width: 100%;
-    max-width: 350px;
-    padding: 32px 24px;
+    max-width: 400px;
+    padding: 36px 28px;
     gap: 18px;
   }
 
   @media (max-width: 360px) {
-    padding: 28px 20px;
+    padding: 32px 24px;
     gap: 16px;
   }
 `;
@@ -57,6 +85,7 @@ const Header = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-bottom: 4px;
 `;
 
 const IconCard = styled.div`
@@ -81,7 +110,7 @@ const IconCard = styled.div`
   }
 `;
 
-const Icon = styled(FaSignInAlt)`
+const Icon = styled(FaUserCircle)`
   font-size: 2rem;
   color: black;
 
@@ -92,7 +121,7 @@ const Icon = styled(FaSignInAlt)`
 
 const Title = styled.h2`
   text-align: center;
-  color: ${colors.text};
+  color: #000000;
   font-size: 1.5rem;
   margin-bottom: 15px;
   margin-top: 1px;
@@ -103,20 +132,51 @@ const Title = styled.h2`
   }
 `;
 
+const Subtitle = styled.p`
+  text-align: center;
+  color: #657786;
+  font-size: 0.9rem;
+  margin: 0;
+  font-weight: 500;
+
+  @media (max-width: 480px) {
+    font-size: 0.85rem;
+  }
+`;
+
+const InputWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const Label = styled.label`
+  color: #000000;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: -2px;
+`;
+
 const Input = styled.input`
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid ${colors.secondary};
-  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   outline: none;
   font-size: 0.95rem;
-  transition: border-color 0.3s ease;
+  transition: all 0.3s ease;
   box-sizing: border-box;
   display: block;
+  background: #f8f7f6;
 
   &:focus {
-    border-color: ${colors.accent};
-    box-shadow: 0 0 0 3px rgba(100, 181, 246, 0.2);
+    border-color: #f18500;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(255, 69, 0, 0.1);
+  }
+
+  &::placeholder {
+    color: #85929e;
   }
 
   @media (max-width: 480px) {
@@ -127,25 +187,52 @@ const Input = styled.input`
 
 const Button = styled.button`
   width: 100%;
-  background-color: ${colors.accent};
+  background: linear-gradient(135deg, #ff4500 0%, #f18500 100%);
   color: white;
   padding: 12px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
   font-size: 1rem;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(255, 69, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    transition: left 0.5s ease;
+  }
 
   &:hover {
-    background-color: ${colors.primary || "#1976d2"};
-    transform: translateY(-1px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 69, 0, 0.5);
+
+    &::before {
+      left: 100%;
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    transform: none;
   }
 
   @media (max-width: 480px) {
@@ -156,23 +243,26 @@ const Button = styled.button`
 
 const HelperText = styled.p`
   text-align: center;
-  font-size: 0.85rem;
-  color: ${colors.secondary};
-  margin-top: 10px;
+  font-size: 0.875rem;
+  color: #657786;
+  margin-top: 4px;
+  font-weight: 500;
 
   a {
-    color: ${colors.accent};
+    color: #ff4500;
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
+    transition: all 0.2s ease;
 
     &:hover {
+      color: #f18500;
       text-decoration: underline;
     }
   }
 
   @media (max-width: 480px) {
     font-size: 0.8rem;
-    margin-top: 8px;
+    margin-top: 2px;
   }
 `;
 
@@ -180,47 +270,85 @@ const PasswordWrapper = styled.div`
   position: relative;
   width: 100%;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+`;
 
-  @media (max-width: 480px) {
-    width: 100%;
-  }
+const PasswordInputField = styled.div`
+  position: relative;
+  width: 100%;
 `;
 
 const PasswordInput = styled.input`
   width: 100%;
-  padding: 12px 40px 12px 14px;
-  border: 1px solid ${colors.secondary};
-  border-radius: 8px;
+  padding: 12px 46px 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   outline: none;
   font-size: 0.95rem;
-  transition: border-color 0.3s ease;
+  transition: all 0.3s ease;
   box-sizing: border-box;
   display: block;
+  background: #f8f7f6;
 
   &:focus {
-    border-color: ${colors.accent};
-    box-shadow: 0 0 0 3px rgba(100, 181, 246, 0.2);
+    border-color: #f18500;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(255, 69, 0, 0.1);
+  }
+
+  &::placeholder {
+    color: #85929e;
   }
 
   @media (max-width: 480px) {
-    padding: 11px 38px 11px 12px;
+    padding: 11px 44px 11px 12px;
     font-size: 0.9rem;
   }
 `;
 
 const EyeIcon = styled.div`
   position: absolute;
-  right: 10px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   cursor: pointer;
   font-size: 1.1rem;
-  color: ${colors.secondary};
+  color: #657786;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: #ff4500;
+    transform: translateY(-50%) scale(1.1);
+  }
 
   @media (max-width: 480px) {
-    right: 8px;
+    right: 10px;
     font-size: 1rem;
+  }
+`;
+
+const Divider = styled.div`
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #85929e;
+  font-size: 0.8rem;
+  margin: 4px 0;
+
+  &::before,
+  &::after {
+    content: "";
+    flex: 1;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  &::before {
+    margin-right: 10px;
+  }
+
+  &::after {
+    margin-left: 10px;
   }
 `;
 
@@ -271,8 +399,15 @@ const Login = () => {
 
       if (response.success) {
         const userResponse = await api("/api/employees/me", "GET");
-        setUserFromLogin(userResponse.data.user);
-        navigate("/attendance");
+        const user = userResponse.data.user;
+        setUserFromLogin(user);
+
+        // Redirect based on user role
+        if (user.role === "admin") {
+          navigate("/dashboard");
+        } else {
+          navigate("/attendance");
+        }
       } else {
         showPopup("error", response.message || "Incorrect email or password.");
       }
@@ -293,28 +428,43 @@ const Login = () => {
           <IconCard>
             <Icon />
           </IconCard>
-          <Title>Sign In</Title>
+          <Title>Welcome Back</Title>
+          <Subtitle>Sign in to access your account</Subtitle>
         </Header>
-        <Input
-          type="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <PasswordWrapper>
-          <PasswordInput
-            type={showPassword ? "text" : "password"}
-            placeholder="Enter your password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+
+        <InputWrapper>
+          <Label htmlFor="email">Email Address</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
-          <EyeIcon onClick={() => setShowPassword((prev) => !prev)}>
-            {showPassword ? <FaEye /> : <FaEyeSlash />}
-          </EyeIcon>
+        </InputWrapper>
+
+        <PasswordWrapper>
+          <Label htmlFor="password">Password</Label>
+          <PasswordInputField>
+            <PasswordInput
+              id="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <EyeIcon onClick={() => setShowPassword((prev) => !prev)}>
+              {showPassword ? <FaEye /> : <FaEyeSlash />}
+            </EyeIcon>
+          </PasswordInputField>
         </PasswordWrapper>
-        <Button type="submit">Login</Button>
+
+        <Button type="submit">Sign In</Button>
+
+        <Divider>or</Divider>
+
         <HelperText>
-          Don’t have an account? <a href="/Contact">Contact HR</a>
+          Don't have an account? <a href="/Contact">Contact HR</a>
         </HelperText>
       </Form>
 

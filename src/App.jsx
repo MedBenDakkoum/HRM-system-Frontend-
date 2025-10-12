@@ -25,6 +25,20 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// DefaultRoute component to redirect authenticated users to appropriate page
+const DefaultRoute = () => {
+  const { user, loading } = useContext(UserContext);
+  if (loading) return null; // Wait for loading to complete
+  if (!user) return <Login />;
+
+  // Redirect based on user role
+  if (user.role === "admin") {
+    return <Navigate to="/dashboard" replace />;
+  } else {
+    return <Navigate to="/attendance" replace />;
+  }
+};
+
 function App() {
   const { loading } = useContext(UserContext);
 
@@ -41,7 +55,7 @@ function App() {
         <Router>
           <ErrorBoundary>
             <Routes>
-              <Route path="/" element={<Login />} />
+              <Route path="/" element={<DefaultRoute />} />
 
               {/* Authenticated routes */}
               <Route

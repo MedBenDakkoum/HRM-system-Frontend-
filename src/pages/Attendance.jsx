@@ -18,6 +18,7 @@ import { FaRegCalendarAlt } from "react-icons/fa";
 import * as faceapi from "face-api.js";
 import Popup from "../components/Popup";
 import Loading from "../components/Loading";
+import QrScanner from "qr-scanner";
 
 const AttendanceWrapper = styled.div`
   display: flex;
@@ -66,7 +67,7 @@ const FormCard = styled.form`
   padding: 40px 30px;
   border-radius: 12px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-  width: 420px;
+  width: 390px;
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -189,7 +190,7 @@ const DatePickerStyled = styled(DatePicker)`
 `;
 
 const ReportCard = styled(FormCard)`
-  width: 420px;
+  /* width: 400px; */
 
   @media (max-width: 768px) {
     width: 100%;
@@ -433,6 +434,7 @@ const StyledTable = styled.table`
 `;
 const Attendance = () => {
   const [entryTime, setEntryTime] = useState("");
+  const [exitTime, setExitTime] = useState("");
   const [longitude, setLongitude] = useState("");
   const [latitude, setLatitude] = useState("");
   const [popupVisible, setPopupVisible] = useState(false);
@@ -454,6 +456,11 @@ const Attendance = () => {
   const [stream, setStream] = useState(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
 
+  // QR Scanner state
+  const [qrScanner, setQrScanner] = useState(null);
+  const [qrScanning, setQrScanning] = useState(false);
+  const qrVideoRef = useRef(null);
+
   // NEW: Fetched flags
   const [attendanceFetched, setAttendanceFetched] = useState(false);
   const [reportsFetched, setReportsFetched] = useState(false);
@@ -464,16 +471,104 @@ const Attendance = () => {
     setPopupVisible(true);
   }, []);
 
+  // Professional time validation functions
+  const validateEntryTime = (date) => {
+    if (!date) return true;
+
+    const now = new Date();
+    const entryDate = new Date(date);
+
+    // Check if entry time is more than 15 minutes in the future
+    const timeDiff = entryDate.getTime() - now.getTime();
+    if (timeDiff > 15 * 60 * 1000) {
+      showPopup(
+        "error",
+        "Entry time cannot be more than 15 minutes in the future"
+      );
+      return false;
+    }
+
+    // For non-admins: cannot select past dates at all (only today with 15 min tolerance)
+    if (user?.role !== "admin") {
+      // Check if date is before today (ignoring time)
+      const todayStart = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+      );
+      const entryDateStart = new Date(
+        entryDate.getFullYear(),
+        entryDate.getMonth(),
+        entryDate.getDate()
+      );
+
+      if (entryDateStart < todayStart) {
+        showPopup("error", "Only admins can record attendance for past dates");
+        return false;
+      }
+
+      // If recording past time today (more than 15 minutes ago), not allowed for non-admins
+      if (timeDiff < -15 * 60 * 1000) {
+        showPopup("error", "Only admins can record attendance for past times");
+        return false;
+      }
+    }
+
+    // For admins: check if entry time is more than 7 days in the past (very lenient)
+    if (user?.role === "admin" && timeDiff < -7 * 24 * 60 * 60 * 1000) {
+      showPopup("error", "Entry time cannot be more than 7 days in the past");
+      return false;
+    }
+
+    return true;
+  };
+
+  const validateExitTime = (timeString) => {
+    if (!timeString) return true;
+
+    const now = new Date();
+    const [hours, minutes] = timeString.split(":");
+    const exitDateTime = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      parseInt(hours),
+      parseInt(minutes)
+    );
+
+    // Check if exit time is in the future (more than 15 minutes ahead)
+    const timeDiff = exitDateTime.getTime() - now.getTime();
+    if (timeDiff > 15 * 60 * 1000) {
+      showPopup("error", "Exit time cannot be in the future");
+      return false;
+    }
+
+    // For non-admins: cannot record past dates (only today with 15 min tolerance)
+    if (user?.role !== "admin") {
+      // If recording past exit time today (more than 15 minutes ago), not allowed for non-admins
+      if (timeDiff < -15 * 60 * 1000) {
+        showPopup("error", "Only admins can record exit time for past times");
+        return false;
+      }
+    }
+
+    // For admins: check if exit time is more than 7 days in the past
+    if (user?.role === "admin" && timeDiff < -7 * 24 * 60 * 60 * 1000) {
+      showPopup("error", "Exit time cannot be more than 7 days in the past");
+      return false;
+    }
+
+    return true;
+  };
+
   // Fetch data
   useEffect(() => {
     if (user?.id && !loading && location.pathname === "/attendance") {
       if (user.role === "admin") {
         const fetchReports = async () => {
           try {
-            const response = await api(
-              "/api/attendance/reports?period=monthly&startDate=2025-08-01",
-              "GET"
-            );
+            // Fetch all reports with default date range (hire date to today)
+            const response = await api("/api/attendance/reports", "GET");
             setReports(response.data.reports || []);
           } catch (error) {
             console.error("Fetch reports failed:", error);
@@ -556,8 +651,14 @@ const Attendance = () => {
         setStream(null);
         setShowCamera(false);
       }
+      if (qrScanner) {
+        qrScanner.stop();
+        qrScanner.destroy();
+        setQrScanner(null);
+        setQrScanning(false);
+      }
     };
-  }, [stream]);
+  }, [stream, qrScanner]);
 
   const startCamera = async () => {
     console.log("Starting camera...");
@@ -590,7 +691,152 @@ const Attendance = () => {
     }
   };
 
-  const drawFaceBox = async () => {
+  // QR Scanner functions
+  const startQrScanner = async () => {
+    try {
+      if (qrVideoRef.current && !qrScanner) {
+        let isProcessing = false; // Flag to prevent multiple submissions
+
+        const scanner = new QrScanner(
+          qrVideoRef.current,
+          (result) => {
+            // Prevent multiple submissions
+            if (isProcessing) {
+              console.log("QR Code already being processed, ignoring...");
+              return;
+            }
+
+            isProcessing = true;
+            console.log("QR Code detected:", result);
+
+            // Stop scanner immediately
+            scanner.stop();
+            scanner.destroy();
+            setQrScanner(null);
+            setQrScanning(false);
+            console.log("QR Scanner stopped");
+
+            // Parse QR code data
+            try {
+              const qrData = JSON.parse(result.data);
+
+              // Check if QR code has expired
+              const now = Date.now();
+              if (qrData.expiresAt && now > qrData.expiresAt) {
+                showPopup(
+                  "error",
+                  "QR Code has expired. Please generate a new one from your Profile page."
+                );
+                isProcessing = false;
+                return;
+              }
+
+              // Admin can scan any employee's QR code, regular users can only scan their own
+              const isValidQr =
+                user?.role === "admin"
+                  ? qrData.employeeId // Admin: any valid QR code
+                  : qrData.employeeId === user?.id; // Employee: only their own QR
+
+              if (qrData.employeeId && isValidQr) {
+                // For admin, set the employeeId from QR code if not already selected
+                if (user?.role === "admin" && qrData.employeeId) {
+                  setEmployeeId(qrData.employeeId);
+                }
+
+                showPopup(
+                  "success",
+                  "QR Code verified! Recording attendance..."
+                );
+                // Auto-submit attendance after QR verification
+                setTimeout(() => {
+                  handleQrAttendance(qrData);
+                }, 1000);
+              } else {
+                showPopup(
+                  "error",
+                  "Invalid QR Code. Please scan your personal QR code."
+                );
+                isProcessing = false;
+              }
+            } catch (parseError) {
+              console.error("QR Code parsing error:", parseError);
+              showPopup(
+                "error",
+                "Invalid QR Code format. Please scan a valid attendance QR code."
+              );
+              isProcessing = false;
+            }
+          },
+          {
+            highlightScanRegion: true,
+            highlightCodeOutline: true,
+          }
+        );
+
+        setQrScanner(scanner);
+        await scanner.start();
+        setQrScanning(true);
+        console.log("QR Scanner started");
+      }
+    } catch (error) {
+      console.error("Error starting QR scanner:", error);
+      showPopup(
+        "error",
+        "Failed to start QR scanner. Please check camera permissions."
+      );
+    }
+  };
+
+  const stopQrScanner = () => {
+    if (qrScanner) {
+      qrScanner.stop();
+      qrScanner.destroy();
+      setQrScanner(null);
+      setQrScanning(false);
+      console.log("QR Scanner stopped");
+    }
+  };
+
+  const handleQrAttendance = async (qrData) => {
+    try {
+      console.log("Submitting QR attendance...");
+
+      // Determine which employee ID to use
+      // Priority: QR code's employeeId (for admin scanning employee QR) > selected employeeId > user's own ID
+      const targetEmployeeId =
+        qrData.employeeId ||
+        (user?.role === "admin" && employeeId ? employeeId : user.id);
+
+      await api("/api/attendance", "POST", {
+        employeeId: targetEmployeeId,
+        entryTime,
+        location: {
+          coordinates: [parseFloat(longitude), parseFloat(latitude)],
+        },
+        method: "qr",
+        qrData: qrData, // Include QR data for verification
+      });
+
+      const response = await api(
+        `/api/attendance/employee/${targetEmployeeId}`,
+        "GET"
+      );
+      setAttendanceRecords(response.data.attendance);
+      showPopup(
+        "success",
+        `QR Code attendance recorded successfully at ${entryTime}.`
+      );
+    } catch (error) {
+      console.error("Error in QR attendance submission:", error.message);
+      showPopup(
+        "error",
+        error.response?.data?.message ||
+          "Failed to record attendance. Please try again."
+      );
+    }
+  };
+
+  const drawFaceBox = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current || !showCamera) return;
     const canvas = canvasRef.current;
     const displaySize = {
@@ -628,13 +874,13 @@ const Attendance = () => {
     if (showCamera) {
       requestAnimationFrame(drawFaceBox);
     }
-  };
+  }, [showCamera]);
 
   useEffect(() => {
     if (showCamera && modelsLoaded) {
       drawFaceBox();
     }
-  }, [showCamera, modelsLoaded]);
+  }, [showCamera, modelsLoaded, drawFaceBox]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -642,6 +888,12 @@ const Attendance = () => {
     if (!user?.id) {
       showPopup("error", "User not authenticated. Please log in.");
       stopCamera();
+      return;
+    }
+
+    // Admin validation: must select an employee
+    if (user?.role === "admin" && !employeeId) {
+      showPopup("error", "Please select an employee to record attendance for.");
       return;
     }
 
@@ -706,7 +958,8 @@ const Attendance = () => {
         console.log("Best face template selected:", faceTemplate);
 
         await api("/api/attendance/facial", "POST", {
-          employeeId: user.id,
+          employeeId:
+            user?.role === "admin" && employeeId ? employeeId : user.id,
           faceTemplate,
           entryTime,
           location: {
@@ -716,7 +969,9 @@ const Attendance = () => {
         console.log("API request successful");
 
         const response = await api(
-          `/api/attendance/employee/${user.id}`,
+          `/api/attendance/employee/${
+            user?.role === "admin" && employeeId ? employeeId : user.id
+          }`,
           "GET"
         );
         setAttendanceRecords(response.data.attendance);
@@ -731,11 +986,12 @@ const Attendance = () => {
         );
         stopCamera();
       }
-    } else if (method === "manual" || method === "qr") {
+    } else if (method === "manual") {
       try {
-        console.log("Submitting manual/QR attendance...");
+        console.log("Submitting manual attendance...");
         await api("/api/attendance", "POST", {
-          employeeId: user.id,
+          employeeId:
+            user?.role === "admin" && employeeId ? employeeId : user.id,
           entryTime,
           location: {
             coordinates: [parseFloat(longitude), parseFloat(latitude)],
@@ -743,19 +999,16 @@ const Attendance = () => {
           method,
         });
         const response = await api(
-          `/api/attendance/employee/${user.id}`,
+          `/api/attendance/employee/${
+            user?.role === "admin" && employeeId ? employeeId : user.id
+          }`,
           "GET"
         );
         setAttendanceRecords(response.data.attendance);
-        showPopup(
-          "success",
-          `${
-            method.charAt(0).toUpperCase() + method.slice(1)
-          } attendance recorded successfully.`
-        );
+        showPopup("success", `Manual attendance recorded successfully.`);
         stopCamera();
       } catch (error) {
-        console.error("Error in manual/QR submission:", error.message);
+        console.error("Error in manual submission:", error.message);
         showPopup(
           "error",
           error.response?.data?.message ||
@@ -763,6 +1016,91 @@ const Attendance = () => {
         );
         stopCamera();
       }
+    } else if (method === "qr") {
+      // Start QR scanner instead of submitting directly
+      if (!qrScanning) {
+        await startQrScanner();
+      } else {
+        showPopup(
+          "error",
+          "QR scanner is already running. Please scan a QR code."
+        );
+      }
+    }
+  };
+
+  const handleExitAttendance = async () => {
+    if (!user?.id) {
+      showPopup("error", "User not authenticated. Please log in.");
+      return;
+    }
+
+    // Admin validation: must select an employee
+    if (user?.role === "admin" && !employeeId) {
+      showPopup("error", "Please select an employee to record exit for.");
+      return;
+    }
+
+    if (!exitTime) {
+      showPopup("error", "Please select exit time.");
+      return;
+    }
+
+    if (!longitude || !latitude) {
+      showPopup("error", "Please get your current location first.");
+      return;
+    }
+
+    // Validate that exit time is after entry time if both are set
+    if (entryTime && exitTime) {
+      const entryDate = new Date(entryTime);
+      const exitDate = new Date(exitTime);
+      if (exitDate <= entryDate) {
+        showPopup("error", "Exit time must be after entry time.");
+        return;
+      }
+    }
+
+    try {
+      console.log("Submitting exit attendance...");
+
+      // Convert time string to full ISO date
+      const now = new Date();
+      const [hours, minutes] = exitTime.split(":");
+      const exitDateTime = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        parseInt(hours),
+        parseInt(minutes)
+      );
+
+      await api("/api/attendance/exit", "POST", {
+        employeeId: user?.role === "admin" && employeeId ? employeeId : user.id,
+        exitTime: exitDateTime.toISOString(),
+        location: {
+          coordinates: [parseFloat(longitude), parseFloat(latitude)],
+        },
+      });
+
+      const response = await api(
+        `/api/attendance/employee/${
+          user?.role === "admin" && employeeId ? employeeId : user.id
+        }`,
+        "GET"
+      );
+      setAttendanceRecords(response.data.attendance);
+      showPopup("success", "Exit time recorded successfully.");
+
+      // Clear exit time after successful submission
+      setExitTime("");
+    } catch (error) {
+      console.error("Error in exit submission:", error.message);
+      showPopup(
+        "error",
+        error.response?.data?.message ||
+          "Failed to record exit time. Please try again."
+      );
     }
   };
 
@@ -844,12 +1182,30 @@ const Attendance = () => {
                   <Title>Record Attendance</Title>
                 </FormHeader>
 
+                {user?.role === "admin" && (
+                  <SelectWrapper>
+                    <SelectStyled
+                      value={employeeId}
+                      onChange={(e) => setEmployeeId(e.target.value)}
+                    >
+                      <option value="">Select Employee</option>
+                      {employees.map((emp) => (
+                        <option key={emp._id} value={emp._id}>
+                          {emp.name} ({emp.role})
+                        </option>
+                      ))}
+                    </SelectStyled>
+                    <SelectArrow>▾</SelectArrow>
+                  </SelectWrapper>
+                )}
+
                 <SelectWrapper>
                   <SelectStyled
                     value={method}
                     onChange={(e) => {
                       setMethod(e.target.value);
                       if (e.target.value !== "facial") stopCamera();
+                      if (e.target.value !== "qr") stopQrScanner();
                     }}
                   >
                     <option value="manual">Manual</option>
@@ -861,14 +1217,22 @@ const Attendance = () => {
 
                 <DatePickerStyled
                   selected={entryTime ? new Date(entryTime) : null}
-                  onChange={(date) =>
-                    setEntryTime(date ? date.toISOString() : "")
-                  }
+                  onChange={(date) => {
+                    if (validateEntryTime(date)) {
+                      setEntryTime(date ? date.toISOString() : "");
+                    }
+                  }}
                   showTimeSelect
                   timeFormat="HH:mm"
                   timeIntervals={5}
                   dateFormat="dd/MM/yyyy HH:mm"
                   placeholderText="Entry Time"
+                  maxDate={new Date()} // Prevent future dates
+                  minDate={
+                    user?.role === "admin"
+                      ? new Date(Date.now() - 24 * 60 * 60 * 1000)
+                      : new Date()
+                  } // Admin: 1 day ago, Employee: today only
                 />
 
                 <InputStyled
@@ -888,6 +1252,10 @@ const Attendance = () => {
                   <Canvas ref={canvasRef} />
                 </VideoContainer>
 
+                <VideoContainer $show={qrScanning}>
+                  <Video ref={qrVideoRef} autoPlay muted />
+                </VideoContainer>
+
                 <LocationButton type="button" onClick={getLocation}>
                   Get Current Location
                 </LocationButton>
@@ -896,7 +1264,7 @@ const Attendance = () => {
                   type="submit"
                   disabled={!entryTime || !longitude || !latitude}
                 >
-                  Record Attendance
+                  Record Entry
                 </ButtonStyled>
 
                 {showCamera && (
@@ -909,6 +1277,67 @@ const Attendance = () => {
                     Stop Camera
                   </ButtonStyled>
                 )}
+
+                {qrScanning && (
+                  <ButtonStyled
+                    type="button"
+                    $stop
+                    onClick={stopQrScanner}
+                    disabled={!qrScanning}
+                  >
+                    Stop QR Scanner
+                  </ButtonStyled>
+                )}
+              </FormCard>
+
+              <FormCard>
+                <FormHeader>
+                  <Title>Record Exit Time</Title>
+                </FormHeader>
+
+                {user?.role === "admin" && (
+                  <SelectWrapper>
+                    <SelectStyled
+                      value={employeeId}
+                      onChange={(e) => setEmployeeId(e.target.value)}
+                    >
+                      <option value="">Select Employee</option>
+                      {employees.map((emp) => (
+                        <option key={emp._id} value={emp._id}>
+                          {emp.name} ({emp.role})
+                        </option>
+                      ))}
+                    </SelectStyled>
+                    <SelectArrow>▾</SelectArrow>
+                  </SelectWrapper>
+                )}
+
+                <DateInputWrapper>
+                  <InputStyled
+                    type="time"
+                    value={exitTime}
+                    onChange={(e) => {
+                      if (validateExitTime(e.target.value)) {
+                        setExitTime(e.target.value);
+                      }
+                    }}
+                    placeholder="Exit Time"
+                    max={new Date().toTimeString().slice(0, 5)} // Prevent future times
+                  />
+                </DateInputWrapper>
+
+                <LocationButton type="button" onClick={getLocation}>
+                  Get Current Location
+                </LocationButton>
+
+                <ButtonStyled
+                  type="button"
+                  onClick={handleExitAttendance}
+                  disabled={!exitTime || !longitude || !latitude}
+                  style={{ backgroundColor: "#FF4500" }} /* #dc3545*/
+                >
+                  Record Exit
+                </ButtonStyled>
               </FormCard>
 
               {user?.role === "admin" && (

@@ -140,15 +140,15 @@ const NotificationBadge = styled.span`
   position: absolute;
   top: -8px;
   right: -8px;
-  background: #dc2626;
+  background: #ff4500;
   color: white;
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   font-weight: 700;
-  padding: 2px 5px;
+  padding: 2px 6px;
   border-radius: 8px;
   min-width: 16px;
   text-align: center;
-  animation: pulse 2s infinite;
+  animation: pulse 1.5s infinite;
   z-index: 1;
 
   @keyframes pulse {
