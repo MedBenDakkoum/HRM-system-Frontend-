@@ -474,13 +474,14 @@ const TableHeader = styled.div`
   display: grid;
   grid-template-columns: 2fr 1fr 1.5fr 1fr 1fr 1.5fr 1fr;
   gap: 1px;
-  background: ${colors.accent || "#f3f4f6"};
+  background: linear-gradient(135deg, #85929e 0%, #657786 100%);
   padding: 16px 24px;
   font-weight: 600;
-  color: ${colors.text || "#374151"};
+  color: white;
   font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 `;
 
 const TableRow = styled.div`
