@@ -1412,15 +1412,25 @@ const Attendance = () => {
                           (a, b) =>
                             new Date(b.startDate) - new Date(a.startDate)
                         )
-                        .map((r, i) => (
-                          <tr key={i}>
-                            <td>{r.employeeId}</td>
-                            <td>{r.employeeName || "Unknown"}</td>
-                            <td>{r.period}</td>
-                            <td>{r.startDate}</td>
-                            <td>{r.totalHours}</td>
-                          </tr>
-                        ))}
+                        .map((r, i) => {
+                          // Format hours to "Xhr Ymin"
+                          const formatHours = (hours) => {
+                            if (!hours || hours === 0) return "0hr 0min";
+                            const hrs = Math.floor(hours);
+                            const mins = Math.round((hours - hrs) * 60);
+                            return `${hrs}hr ${mins}min`;
+                          };
+
+                          return (
+                            <tr key={i}>
+                              <td>{r.employeeId}</td>
+                              <td>{r.employeeName || "Unknown"}</td>
+                              <td>{r.period}</td>
+                              <td>{r.startDate}</td>
+                              <td>{formatHours(r.totalHours)}</td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </StyledTable>
                 ) : (
