@@ -392,6 +392,9 @@ const Login = () => {
 
     setIsLoading(true);
     try {
+      // Clear any existing mobile token
+      localStorage.removeItem("mobile_auth_token");
+
       const response = await api("/api/employees/login", "POST", {
         email,
         password,

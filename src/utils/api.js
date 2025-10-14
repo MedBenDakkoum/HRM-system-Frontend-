@@ -1,12 +1,14 @@
-
-
 const baseURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:10000";
 
 const api = async (endpoint, method = "GET", body = null, headers = {}) => {
+  // Check for mobile token fallback
+  const mobileToken = localStorage.getItem("mobile_auth_token");
+
   const options = {
     method,
     headers: {
       "Content-Type": "application/json",
+      ...(mobileToken && { Authorization: `Bearer ${mobileToken}` }),
       ...headers,
     },
     credentials: "include", // Ensure cookies are sent
@@ -28,7 +30,15 @@ const api = async (endpoint, method = "GET", body = null, headers = {}) => {
     });
     throw new Error(`HTTP error! status: ${response.status}`);
   }
-  return await response.json();
+
+  const result = await response.json();
+
+  // Store mobile token if provided in response (for mobile fallback)
+  if (result.token && import.meta.env.PROD) {
+    localStorage.setItem("mobile_auth_token", result.token);
+  }
+
+  return result;
 };
 
 // All endpoints (unchanged)
