@@ -415,8 +415,17 @@ const Login = () => {
         showPopup("error", response.message || "Incorrect email or password.");
       }
     } catch (error) {
-      console.error("Server error:", error);
-      showPopup("error", "Server error. Please try again later.");
+      console.error("Login error:", error);
+
+      // Handle specific error messages from the server
+      if (
+        error.message &&
+        error.message !== "Server error. Please try again later."
+      ) {
+        showPopup("error", error.message);
+      } else {
+        showPopup("error", "Server error. Please try again later.");
+      }
     } finally {
       setIsLoading(false);
     }

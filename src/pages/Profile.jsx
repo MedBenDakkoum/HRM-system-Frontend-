@@ -1495,60 +1495,78 @@ const Profile = () => {
               )}
             </>
           ) : (
-            <ProfileCard>
-              <FormHeader>
-                <Title>Your Profile</Title>
-              </FormHeader>
-              <DetailText>Name: {employeeData.name}</DetailText>
-              <DetailText>Email: {employeeData.email}</DetailText>
-              <DetailText>
-                Position: {employeeData.position || "N/A"}
-              </DetailText>
-              <DetailText>
-                Hire Date:{" "}
-                {employeeData.hireDate
-                  ? new Date(employeeData.hireDate).toLocaleDateString()
-                  : "N/A"}
-              </DetailText>
-              <DetailText>
-                QR Code: {employeeData.qrCode ? "Generated" : "Not generated"}
-              </DetailText>
-              {employeeData.qrCode && (
-                <div style={{ textAlign: "center", margin: "10px 0" }}>
-                  <img
-                    src={employeeData.qrCode}
-                    alt="QR Code"
-                    style={{
-                      maxWidth: "200px",
-                      maxHeight: "200px",
-                      border: "1px solid #ddd",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <div
-                    style={{
-                      marginTop: "10px",
-                      fontSize: "0.85rem",
-                      color: "#666",
-                      fontStyle: "italic",
-                    }}
-                  >
-                    ⏰ Valid for 12 hours from generation
+            <>
+              {/* Profile Information Card */}
+              <ProfileCard>
+                <FormHeader>
+                  <Title>Your Profile</Title>
+                </FormHeader>
+                <DetailText>Name: {employeeData.name}</DetailText>
+                <DetailText>Email: {employeeData.email}</DetailText>
+                <DetailText>
+                  Position: {employeeData.position || "N/A"}
+                </DetailText>
+                <DetailText>
+                  Hire Date:{" "}
+                  {employeeData.hireDate
+                    ? new Date(employeeData.hireDate).toLocaleDateString()
+                    : "N/A"}
+                </DetailText>
+                <DetailText>
+                  Face Template:{" "}
+                  {employeeData.faceDescriptor
+                    ? "Registered"
+                    : "Not registered"}
+                </DetailText>
+              </ProfileCard>
+
+              {/* QR Code Card - Separate */}
+              <ProfileCard>
+                <FormHeader>
+                  <Title>QR Code</Title>
+                </FormHeader>
+                <DetailText>
+                  Status: {employeeData.qrCode ? "Generated" : "Not generated"}
+                </DetailText>
+
+                {employeeData.qrCode && (
+                  <div style={{ textAlign: "center", margin: "20px 0" }}>
+                    <img
+                      src={employeeData.qrCode}
+                      alt="QR Code"
+                      style={{
+                        maxWidth: "250px",
+                        maxHeight: "250px",
+                        border: "2px solid #e5e7eb",
+                        borderRadius: "12px",
+                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                      }}
+                    />
+                    <div
+                      style={{
+                        marginTop: "15px",
+                        fontSize: "0.9rem",
+                        color: "#6b7280",
+                        fontWeight: "500",
+                      }}
+                    >
+                      ⏰ Valid for 12 hours from generation
+                    </div>
                   </div>
-                </div>
-              )}
-              <ModalButton
-                type="button"
-                className="submit"
-                onClick={generateQRCode}
-              >
-                Generate QR Code
-              </ModalButton>
-              <DetailText>
-                Face Template:{" "}
-                {employeeData.faceDescriptor ? "Registered" : "Not registered"}
-              </DetailText>
-            </ProfileCard>
+                )}
+
+                <ModalButton
+                  type="button"
+                  className="submit"
+                  onClick={generateQRCode}
+                  style={{ marginTop: employeeData.qrCode ? "10px" : "20px" }}
+                >
+                  {employeeData.qrCode
+                    ? "Generate New QR Code"
+                    : "Generate QR Code"}
+                </ModalButton>
+              </ProfileCard>
+            </>
           )}
         </Content>
       </ProfileWrapper>

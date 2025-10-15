@@ -22,16 +22,37 @@ const api = async (endpoint, method = "GET", body = null, headers = {}) => {
     console.log("Fetching:", `${baseURL}${endpoint}`, options); // Debug log
   }
   const response = await fetch(`${baseURL}${endpoint}`, options);
-  if (!response.ok) {
-    const errorText = await response.text(); // Log response body for details
-    console.error("Fetch error:", {
+
+  // Try to parse the response body first
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    // If JSON parsing fails, handle as text
+    const errorText = await response.text();
+    console.error("Fetch error - JSON parse failed:", {
       status: response.status,
       text: errorText,
     });
-    throw new Error(`HTTP error! status: ${response.status}`);
+    throw new Error(`Server error. Please try again later.`);
   }
 
-  const result = await response.json();
+  // If response is not ok, throw error with the actual message from server
+  if (!response.ok) {
+    console.error("Fetch error:", {
+      status: response.status,
+      message: result.message || "Unknown error",
+      result: result,
+    });
+
+    // Create error with the actual server message
+    const error = new Error(
+      result.message || "Server error. Please try again later."
+    );
+    error.status = response.status;
+    error.serverResponse = result;
+    throw error;
+  }
 
   // Store mobile token if provided in response (for mobile fallback)
   if (result.token && import.meta.env.PROD) {

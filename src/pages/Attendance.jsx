@@ -473,91 +473,16 @@ const Attendance = () => {
 
   // Professional time validation functions
   const validateEntryTime = (date) => {
+    // Demo-friendly: Allow any entry time for testing purposes
+    // No time restrictions - CEO can test at any time of day
     if (!date) return true;
-
-    const now = new Date();
-    const entryDate = new Date(date);
-
-    // Check if entry time is more than 15 minutes in the future
-    const timeDiff = entryDate.getTime() - now.getTime();
-    if (timeDiff > 15 * 60 * 1000) {
-      showPopup(
-        "error",
-        "Entry time cannot be more than 15 minutes in the future"
-      );
-      return false;
-    }
-
-    // For non-admins: cannot select past dates at all (only today with 15 min tolerance)
-    if (user?.role !== "admin") {
-      // Check if date is before today (ignoring time)
-      const todayStart = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate()
-      );
-      const entryDateStart = new Date(
-        entryDate.getFullYear(),
-        entryDate.getMonth(),
-        entryDate.getDate()
-      );
-
-      if (entryDateStart < todayStart) {
-        showPopup("error", "Only admins can record attendance for past dates");
-        return false;
-      }
-
-      // If recording past time today (more than 15 minutes ago), not allowed for non-admins
-      if (timeDiff < -15 * 60 * 1000) {
-        showPopup("error", "Only admins can record attendance for past times");
-        return false;
-      }
-    }
-
-    // For admins: check if entry time is more than 7 days in the past (very lenient)
-    if (user?.role === "admin" && timeDiff < -7 * 24 * 60 * 60 * 1000) {
-      showPopup("error", "Entry time cannot be more than 7 days in the past");
-      return false;
-    }
-
     return true;
   };
 
   const validateExitTime = (timeString) => {
+    // Demo-friendly: Allow any exit time for testing purposes
+    // No time restrictions - CEO can test at any time of day
     if (!timeString) return true;
-
-    const now = new Date();
-    const [hours, minutes] = timeString.split(":");
-    const exitDateTime = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      parseInt(hours),
-      parseInt(minutes)
-    );
-
-    // Check if exit time is in the future (more than 15 minutes ahead)
-    const timeDiff = exitDateTime.getTime() - now.getTime();
-    if (timeDiff > 15 * 60 * 1000) {
-      showPopup("error", "Exit time cannot be in the future");
-      return false;
-    }
-
-    // For non-admins: cannot record past dates (only today with 15 min tolerance)
-    if (user?.role !== "admin") {
-      // If recording past exit time today (more than 15 minutes ago), not allowed for non-admins
-      if (timeDiff < -15 * 60 * 1000) {
-        showPopup("error", "Only admins can record exit time for past times");
-        return false;
-      }
-    }
-
-    // For admins: check if exit time is more than 7 days in the past
-    if (user?.role === "admin" && timeDiff < -7 * 24 * 60 * 60 * 1000) {
-      showPopup("error", "Exit time cannot be more than 7 days in the past");
-      return false;
-    }
-
     return true;
   };
 
@@ -1227,12 +1152,7 @@ const Attendance = () => {
                   timeIntervals={5}
                   dateFormat="dd/MM/yyyy HH:mm"
                   placeholderText="Entry Time"
-                  maxDate={new Date()} // Prevent future dates
-                  minDate={
-                    user?.role === "admin"
-                      ? new Date(Date.now() - 24 * 60 * 60 * 1000)
-                      : new Date()
-                  } // Admin: 1 day ago, Employee: today only
+                  // Demo-friendly: No date restrictions for testing
                 />
 
                 <InputStyled
@@ -1322,7 +1242,7 @@ const Attendance = () => {
                       }
                     }}
                     placeholder="Exit Time"
-                    max={new Date().toTimeString().slice(0, 5)} // Prevent future times
+                    // Demo-friendly: No time restrictions for testing
                   />
                 </DateInputWrapper>
 
