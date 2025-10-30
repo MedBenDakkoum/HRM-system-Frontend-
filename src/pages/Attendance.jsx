@@ -455,6 +455,7 @@ const Attendance = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
+  const rafRef = useRef(null);
 
   // QR Scanner state
   const [qrScanner, setQrScanner] = useState(null);
@@ -607,13 +608,44 @@ const Attendance = () => {
   };
 
   const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
-      if (videoRef.current) videoRef.current.srcObject = null;
-      setShowCamera(false);
-      console.log("Camera stopped");
+    // stop any tracked stream from state
+    const stopTracks = (mediaStream) => {
+      if (!mediaStream) return;
+      try {
+        mediaStream.getTracks().forEach((track) => {
+          try { track.stop(); } catch (e) {}
+          try { track.enabled = false; } catch (e) {}
+        });
+      } catch (e) {}
+    };
+
+    stopTracks(stream);
+    setStream(null);
+
+    // also stop whatever is currently bound to the <video> elements
+    const videoStream = videoRef.current?.srcObject;
+    if (videoStream && typeof videoStream.getTracks === 'function') {
+      stopTracks(videoStream);
     }
+    const qrStream = qrVideoRef.current?.srcObject;
+    if (qrStream && typeof qrStream.getTracks === 'function') {
+      stopTracks(qrStream);
+    }
+
+    if (rafRef.current) {
+      try { cancelAnimationFrame(rafRef.current); } catch (e) {}
+      rafRef.current = null;
+    }
+    if (videoRef.current) {
+      try { videoRef.current.pause(); } catch (e) {}
+      videoRef.current.srcObject = null;
+    }
+    if (qrVideoRef.current) {
+      try { qrVideoRef.current.pause(); } catch (e) {}
+      qrVideoRef.current.srcObject = null;
+    }
+    setShowCamera(false);
+    console.log("Camera stopped");
   };
 
   // QR Scanner functions
@@ -775,7 +807,8 @@ const Attendance = () => {
     const detections = await faceapi
       .detectAllFaces(
         videoRef.current,
-        new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.8 })
+        // More tolerant detection for low light while keeping ID match server-side
+        new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 })
       )
       .withFaceLandmarks();
     const resizedDetections = faceapi.resizeResults(detections, displaySize);
@@ -784,10 +817,10 @@ const Attendance = () => {
       const box = detection.detection.box;
       context.beginPath();
       context.lineWidth = 2;
-      context.strokeStyle = detection.detection.score > 0.8 ? "green" : "red";
+      context.strokeStyle = detection.detection.score > 0.6 ? "green" : "red";
       context.rect(box.x, box.y, box.width, box.height);
       context.stroke();
-      context.fillStyle = detection.detection.score > 0.8 ? "green" : "red";
+      context.fillStyle = detection.detection.score > 0.6 ? "green" : "red";
       context.font = "16px Arial";
       context.fillText(
         `Score: ${detection.detection.score.toFixed(2)}`,
@@ -797,7 +830,7 @@ const Attendance = () => {
     });
 
     if (showCamera) {
-      requestAnimationFrame(drawFaceBox);
+      rafRef.current = requestAnimationFrame(drawFaceBox);
     }
   }, [showCamera]);
 
@@ -846,12 +879,12 @@ const Attendance = () => {
         console.log("Attempting face detection...");
         let bestDetection = null;
         let maxScore = 0;
-        const maxAttempts = 5;
+        const maxAttempts = 10; // gather more frames to overcome lighting noise
         for (let i = 0; i < maxAttempts; i++) {
           const detections = await faceapi
             .detectAllFaces(
               videoRef.current,
-              new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.8 })
+              new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 })
             )
             .withFaceLandmarks()
             .withFaceDescriptors();
@@ -870,10 +903,10 @@ const Attendance = () => {
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
 
-        if (!bestDetection || maxScore < 0.8) {
+        if (!bestDetection || maxScore < 0.6) {
           showPopup(
             "error",
-            "No reliable face detected. Ensure good lighting, face the camera directly, or re-register in Profile."
+            "Face not clear enough. Move closer, center your face, or improve lighting slightly."
           );
           stopCamera();
           return;
@@ -904,11 +937,24 @@ const Attendance = () => {
         stopCamera();
       } catch (error) {
         console.error("Error in face detection or API:", error.message);
-        showPopup(
-          "error",
-          error.response?.data?.message ||
-            "Failed to record attendance. Ensure good lighting, face the camera directly, or re-register in Profile."
-        );
+        const status = error?.status || error?.response?.status;
+        if (status === 401) {
+          showPopup(
+            "error",
+            "Unauthorized or session expired. Please log in again."
+          );
+        } else if (status === 403) {
+          showPopup(
+            "error",
+            "You are not allowed to record facial attendance for this user."
+          );
+        } else {
+          showPopup(
+            "error",
+            error.response?.data?.message ||
+              "Failed to record attendance. Ensure good lighting, face the camera directly, or re-register in Profile."
+          );
+        }
         stopCamera();
       }
     } else if (method === "manual") {
@@ -1187,12 +1233,13 @@ const Attendance = () => {
                   Record Entry
                 </ButtonStyled>
 
-                {showCamera && (
+                {method === "facial" && (
                   <ButtonStyled
                     type="button"
                     $stop
                     onClick={stopCamera}
                     disabled={!showCamera}
+                    aria-label="Stop Camera"
                   >
                     Stop Camera
                   </ButtonStyled>
