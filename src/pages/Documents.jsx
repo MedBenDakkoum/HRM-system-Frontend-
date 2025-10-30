@@ -649,15 +649,37 @@ const Documents = () => {
     try {
       const base =
         import.meta.env.VITE_API_BASE_URL || "http://localhost:10000";
-      const response = await fetch(`${base}/api/documents/download/${docId}`, {
+      const downloadUrl = `${base}/api/documents/download/${docId}`;
+
+      // iOS Safari and some Android browsers don't support programmatic blob downloads.
+      // Prefer native download via opening the URL when the 'download' attribute is unsupported.
+      const anchorSupportsDownload =
+        typeof HTMLAnchorElement !== "undefined" &&
+        "download" in HTMLAnchorElement.prototype;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+
+      if (!anchorSupportsDownload || isIOS || isMobile) {
+        // Let the browser handle the stream directly, which honors Content-Disposition
+        const opened = window.open(downloadUrl, "_blank");
+        if (!opened) {
+          // Fallback in case popups are blocked
+          window.location.href = downloadUrl;
+        }
+        showPopupSafe("success", "Document download started");
+        return;
+      }
+
+      // Desktop path: use blob for consistent file naming
+      const response = await fetch(downloadUrl, {
         method: "GET",
         credentials: "include",
       });
-
       if (!response.ok) {
         throw new Error(`Failed to download document: ${response.statusText}`);
       }
-
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
